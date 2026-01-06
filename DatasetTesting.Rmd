@@ -1,0 +1,129 @@
+---
+title: "Dataset Testing"
+output: html_notebook
+---
+
+# 0. Environment Set-Up
+Loading libraries
+```{r}
+library(dplyr)
+library(data.table)
+library(Matrix)
+library(SingleCellExperiment)
+library(TCGAbiolinks)
+```
+
+# 1. Loading Datasets
+## 1.1 Huuky-Myers et al. (2024)
+Getting full dorsolateral prefrontal cortex (DLPFC) data 
+```{r}
+stopifnot(packageVersion("spatialLIBD") >= "1.11.6")
+sce_path_zip <- spatialLIBD::fetch_data("spatialDLPFC_snRNAseq")
+sce_path <- unzip(sce_path_zip, exdir = tempdir())
+sce_DLPFC <- HDF5Array::loadHDF5SummarizedExperiment(file.path(tempdir(), "sce_DLPFC_annotated"))
+rm(sce_path, sce_path_zip)
+```
+
+Getting example DLPFC data
+```{r}
+sce_DLPFC <- DeconvoBuddies::fetch_deconvo_data("sce_DLPFC_example")
+```
+
+Getting bulk DLPFC data
+```{r}
+blk_DLPFC <- DeconvoBuddies::fetch_deconvo_data("rse_gene")
+```
+## 1.2 Neftel et al. (2019)
+From the [Curated Cancer Cell Atlas (3CA)](https://www.weizmann.ac.il/sites/3CA/brain), download `Data_Neftel2019_Brain.tar.gz` into the `data/` directory.
+
+Decompressing `Data_Neftel2019_Brain.tar.gz`.
+```{r}
+if (!dir.exists("data/Data_Neftel2019_Brain") & file.exists("data/Data_Neftel2019_Brain.tar.gz")) {
+  untar("data/Data_Neftel2019_Brain.tar.gz", exdir = "data/")
+  print("Decompression complete.")
+} else if (dir.exists("data/Data_Neftel2019_Brain")) {
+  print("Neftel2019 data has been decompressed.")
+} else if (!file.exists("data/Data_Neftel2019_Brain.tar.gz")) {
+  print("File 'Data_Neftel2019_Brain.tar.gz' is not in 'data/' directory. It may be downloaded from: https://www.weizmann.ac.il/sites/3CA/brain")
+}
+```
+
+
+
+Getting glioma SMART-Seq2 data
+```{r}
+counts <- readMM("data/Data_Neftel2019_Brain/SmartSeq2/Exp_data_TPM.mtx")
+genes <- fread("data/Data_Neftel2019_Brain/SmartSeq2/Genes.txt", header = FALSE)$V1
+cells <- fread("data/Data_Neftel2019_Brain/SmartSeq2/Cells.csv", header = TRUE)
+barcodes <- cells[[1]]
+
+rownames(counts) <- genes
+colnames(counts) <- barcodes
+
+sce_gliomaSS2 <- SingleCellExperiment(
+  assays = list(tpm = counts),
+  colData = as.data.frame(cells)
+  )
+rm(cells, counts, genes, barcodes)
+```
+Getting glioma 10x data
+```{r}
+counts <- readMM("data/Data_Neftel2019_Brain/10X/Exp_data_UMIcounts.mtx")
+genes <- fread("data/Data_Neftel2019_Brain/10X/Genes.txt", header = FALSE)$V1
+cells <- fread("data/Data_Neftel2019_Brain/10X/Cells.csv", header = TRUE)
+barcodes <- cells[[1]]
+
+rownames(counts) <- genes
+colnames(counts) <- barcodes
+
+sce_glioma10x <- SingleCellExperiment(
+  assays = list(counts = counts),
+  colData = as.data.frame(cells)
+  )
+rm(cells, counts, genes, barcodes)
+```
+# 1.3 Genomic Data Commons (GDC) Data Portal
+
+```{r}
+query <- GDCquery(
+    project = "TCGA-GBM",
+    data.category = "Transcriptome Profiling",
+    data.type = "Gene Expression Quantification",
+    workflow.type = "STAR - Counts",
+    access = "open"
+)
+```
+
+
+
+# 2. Exploring Datasets
+
+Exploring DLPFC single-cell dataset (`sce_DLPFC`).
+```{r}
+# Look at dataset dimension (#genes x #cells)
+dim(sce_DLPFC)
+
+# Look at assay names
+names(assays(sce_DLPFC))
+
+# Check cell metadata fields
+colnames(colData(sce_DLPFC))
+
+# Check number of cells per sample
+table(sce_DLPFC$Sample)
+```
+
+Exploring DLPFC bulk dataset (`blk_DLPFC`).
+```{r}
+# Look at dataset dimension (#genes x #samples)
+dim(blk_DLPFC)
+
+# Check samples per library_type
+table(blk_DLPFC$library_type)
+
+# Subset dataset according to `library_type` and `library_prep`
+blk_sub <- blk_DLPFC[, (blk_DLPFC$library_type == "polyA") & (blk_DLPFC$library_prep == "Cyto")]
+dim(blk_sub)
+mean(colSums(assay(blk_sub, "counts")))
+```
+
