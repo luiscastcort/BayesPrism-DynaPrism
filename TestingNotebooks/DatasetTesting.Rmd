@@ -12,6 +12,11 @@ library(Matrix)
 library(SingleCellExperiment)
 library(TCGAbiolinks)
 ```
+Global variables
+```{r}
+data_dir <- "../data/"
+dir.exists(data_dir)
+```
 
 # 1. Loading Datasets
 ## 1.1 Huuky-Myers et al. (2024)
@@ -38,13 +43,13 @@ From the [Curated Cancer Cell Atlas (3CA)](https://www.weizmann.ac.il/sites/3CA/
 
 Decompressing `Data_Neftel2019_Brain.tar.gz`.
 ```{r}
-if (!dir.exists("data/Data_Neftel2019_Brain") & file.exists("data/Data_Neftel2019_Brain.tar.gz")) {
-  untar("data/Data_Neftel2019_Brain.tar.gz", exdir = "data/")
+if (!dir.exists(paste0(data_dir, "Data_Neftel2019_Brain")) & file.exists(paste0(data_dir,"Data_Neftel2019_Brain.tar.gz"))) {
+  untar(paste0(data_dir,"Data_Neftel2019_Brain.tar.gz"), exdir = data_dir)
   print("Decompression complete.")
-} else if (dir.exists("data/Data_Neftel2019_Brain")) {
+} else if (dir.exists(paste0(data_dir, "Data_Neftel2019_Brain"))) {
   print("Neftel2019 data has been decompressed.")
-} else if (!file.exists("data/Data_Neftel2019_Brain.tar.gz")) {
-  print("File 'Data_Neftel2019_Brain.tar.gz' is not in 'data/' directory. It may be downloaded from: https://www.weizmann.ac.il/sites/3CA/brain")
+} else if (!file.exists(paste0(data_dir,"Data_Neftel2019_Brain.tar.gz"))) {
+  print("File 'Data_Neftel2019_Brain.tar.gz' is not in the data directory. It may be downloaded from: https://www.weizmann.ac.il/sites/3CA/brain")
 }
 ```
 
@@ -52,9 +57,9 @@ if (!dir.exists("data/Data_Neftel2019_Brain") & file.exists("data/Data_Neftel201
 
 Getting glioma SMART-Seq2 data
 ```{r}
-counts <- readMM("data/Data_Neftel2019_Brain/SmartSeq2/Exp_data_TPM.mtx")
-genes <- fread("data/Data_Neftel2019_Brain/SmartSeq2/Genes.txt", header = FALSE)$V1
-cells <- fread("data/Data_Neftel2019_Brain/SmartSeq2/Cells.csv", header = TRUE)
+counts <- readMM(paste0(data_dir, "Data_Neftel2019_Brain/SmartSeq2/Exp_data_TPM.mtx"))
+genes <- fread(paste0(data_dir, "Data_Neftel2019_Brain/SmartSeq2/Genes.txt"), header = FALSE)$V1
+cells <- fread(paste0(data_dir, "Data_Neftel2019_Brain/SmartSeq2/Cells.csv"), header = TRUE)
 barcodes <- cells[[1]]
 
 rownames(counts) <- genes
@@ -68,9 +73,9 @@ rm(cells, counts, genes, barcodes)
 ```
 Getting glioma 10x data
 ```{r}
-counts <- readMM("data/Data_Neftel2019_Brain/10X/Exp_data_UMIcounts.mtx")
-genes <- fread("data/Data_Neftel2019_Brain/10X/Genes.txt", header = FALSE)$V1
-cells <- fread("data/Data_Neftel2019_Brain/10X/Cells.csv", header = TRUE)
+counts <- readMM(paste0(data_dir, "Data_Neftel2019_Brain/10X/Exp_data_UMIcounts.mtx"))
+genes <- fread(paste0(data_dir, "Data_Neftel2019_Brain/10X/Genes.txt"), header = FALSE)$V1
+cells <- fread(paste0(data_dir,"Data_Neftel2019_Brain/10X/Cells.csv"), header = TRUE)
 barcodes <- cells[[1]]
 
 rownames(counts) <- genes
@@ -126,4 +131,3 @@ blk_sub <- blk_DLPFC[, (blk_DLPFC$library_type == "polyA") & (blk_DLPFC$library_
 dim(blk_sub)
 mean(colSums(assay(blk_sub, "counts")))
 ```
-
