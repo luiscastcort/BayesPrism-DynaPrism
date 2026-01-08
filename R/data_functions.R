@@ -5,11 +5,11 @@ mtx_to_sce <- function(assay_path, genes_path, cells_path, assay_type = "counts"
   cells <- fread(cells_path, header = TRUE)
   barcodes <- cells[[1]]
   
-  rownames(counts) <- genes
-  colnames(counts) <- barcodes
+  rownames(metric) <- genes
+  colnames(metric) <- barcodes
   
   sce <- SingleCellExperiment(
-    assays = list(counts = counts),
+    assays = list(counts = metric),
     colData = as.data.frame(cells)
   )
   
