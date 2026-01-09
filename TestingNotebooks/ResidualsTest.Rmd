@@ -1,0 +1,184 @@
+---
+title: "Residuals Test"
+output:
+  html_document:
+    df_print: paged
+---
+
+# 0. Environment Set-Up
+Packages
+```{r}
+library(BayesPrism)
+library(Matrix) #readMM()
+library(data.table) # fread()
+library(SingleCellExperiment) # SingleCellExperiment
+library(biomaRt) # Get Gene Symbols from Ensembl IDs
+library(ggplot2)
+library(tidyverse)
+```
+Functions
+```{r}
+source("../R/data_functions.R")
+```
+Global variables
+```{r}
+data_dir <- "../data/"
+dir.exists(data_dir)
+```
+
+# 1. Loading Data
+Reference data
+```{r}
+load(paste0(data_dir,"tutorial.dat/tutorial.gbm.rdata"))
+genes <- gsub("\\..*", "", colnames(sc.dat))
+sce <- SingleCellExperiment(assays = list(counts = t(sc.dat)))
+sce$cell_type_labels <- cell.type.labels
+sce$cell_state_labels <- cell.state.labels
+rm(sc.dat, cell.state.labels, cell.type.labels)
+
+#sce <- mtx_to_sce(
+#  paste0(data_dir,"Data_Neftel2019_Brain/10X/Exp_data_UMIcounts.mtx"), 
+#  paste0(data_dir,"Data_Neftel2019_Brain/10X/Genes.txt"), 
+#  paste0(data_dir, "Data_Neftel2019_Brain/10X/Cells.csv")
+#  )
+```
+
+NicheNet data
+```{r}
+# Ligand target matrix. Target genes in rows, ligands in columns.
+ligand_target_matrix <- readRDS(paste0(data_dir, "nichenetr.dat/ligand_target_matrix_nsga2r_final.rds")) 
+```
+# 2. Reference quality control
+```{r}
+rm(bk.dat)
+
+sc.stat <- plot.scRNA.outlier(
+  input=t(assay(sce)), #make sure the colnames are gene symbol or ENSMEBL ID 
+  cell.type.labels=sce$cell_type_labels,
+  species="hs", #currently only human(hs) and mouse(mm) annotations are supported
+  return.raw=TRUE #return the data used for plotting. 
+  #pdf.prefix="gbm.sc.stat" specify pdf.prefix if need to output to pdf
+)
+rowData(sce) <- cbind(rowData(sce), sc.stat)
+rm(sc.stat)
+
+# Removing ribosomal, mitochondrial and chrX  chrY genes
+sc.dat.filtered <- cleanup.genes (input=t(assay(sce)),
+                                  input.type="count.matrix",
+                                    species="hs", 
+                                    gene.group=c( "Rb","Mrp","other_Rb","chrM","MALAT1","chrX","chrY") ,
+                                    exp.cells=5)
+sce <- sce[colnames(sc.dat.filtered), ]
+rm(sc.dat.filtered)
+
+# Limiting to protein coding genes
+sc.dat.filtered.pc <-  select.gene.type (t(assay(sce)),
+                                        gene.type = "protein_coding")
+sce <- sce[colnames(sc.dat.filtered.pc), ]
+rm(sc.dat.filtered.pc)
+
+# Changing rownames for gene symbols
+rowData(sce)$EnsemblID <- rownames(sce)
+mart <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+
+gene_map <- getBM(
+  attributes = c("ensembl_gene_id", "external_gene_name"),
+  filters = "ensembl_gene_id",
+  values = gsub("\\..*", "", rownames(sce)),
+  mart = mart
+)
+
+new_names <- gene_map$external_gene_name[match(gsub("\\..*", "", rownames(sce)), gene_map$ensembl_gene_id)]
+new_names[is.na(new_names) | new_names == ""] <- rownames(sce)[is.na(new_names) | new_names == ""]
+rownames(sce) <- make.unique(new_names)
+```
+
+
+# 3. Selecting the interaction
+```{r}
+selected_ligand = "TGFB1"
+target_weights = ligand_target_matrix[, selected_ligand]
+top_targets = names(sort(target_weights, decreasing = TRUE)[1:100])
+```
+
+```{r}
+sender_type <- "tumor"
+receiver_type <- "myeloid"
+# Extract raw counts
+raw_counts <- as.matrix(counts(sce))
+perturbed_counts <- raw_counts
+
+# Identify receiver colmuns
+rec_idx <- which(sce$cell_type_labels == receiver_type)
+
+# Filter targets that actually exist in your SCE
+valid_targets = intersect(top_targets, rownames(sce))
+
+# Apply the perturbation to the recievers ONLY
+perturbed_counts[valid_targets, rec_idx] <- perturbed_counts[valid_targets, rec_idx] * 2.5
+
+# Collapse all cells into a single Bulk RNA-seq sample
+pseudo_bulk <- rowSums(perturbed_counts)
+```
+# 4. BayesPrism 
+```{r}
+myPrism <- new.prism(
+  reference=t(raw_counts), 
+  mixture=pseudo_bulk,
+  input.type="count.matrix", 
+  cell.type.labels = sce$cell_type_labels, 
+  cell.state.labels = sce$cell_state_labels,
+  key="tumor",
+  outlier.cut=0.01,
+    outlier.fraction=0.1,
+)
+
+bp_res <- run.prism(prism = myPrism, n.cores=4)
+```
+```{r}
+# Get inferred receiver expression (posterior mean counts)
+inferred_rec_exp <- get.exp(bp_res, state.or.type = "type", cell.name = receiver_type)
+
+# Get true receiver expression from our simulation
+true_rec_exp <- rowSums(perturbed_counts[, rec_idx])
+
+# Normalize both to CPM (Counts Per Million) to make them comparable
+inf_cpm = (inferred_rec_exp / sum(inferred_rec_exp)) * 1e6
+true_cpm = (true_rec_exp / sum(true_rec_exp)) * 1e6
+
+# The Residual: How much did BayesPrism under-estimate?
+# (Focus on common genes between NicheNet and our data)
+common_genes = intersect(names(inf_cpm), names(target_weights))
+residuals = true_cpm[common_genes] - inf_cpm[common_genes]
+
+# We correlate the error (Residual) with the NicheNet Prior (Target Weight)
+correlation_test = cor.test(residuals, target_weights[common_genes], method="spearman")
+print(correlation_test)
+
+plot_data <- data.frame(
+  NicheNet_Score = target_weights[common_genes],
+  BayesPrism_Error = residuals,
+  gene = common_genes
+)
+
+ggplot(plot_data, aes(x=NicheNet_Score, y=BayesPrism_Error)) +
+  geom_point(alpha=0.5) +
+  geom_smooth(method="lm", color="red") +
+  theme_minimal() +
+  labs(title=paste("Residuals Test:", selected_ligand, "induced changes"),
+       x="NicheNet Regulatory Potential",
+       y="BayesPrism Estimation Error (True - Inferred)")
+```
+
+```{r}
+top_500_genes <- names(sort(target_weights, decreasing = TRUE)[1:500])
+top_common <- intersect(top_500_genes, names(residuals))
+cor.test(residuals[top_common], target_weights[top_common], method="spearman")
+
+plot_data %>%
+  mutate(bin = cut(NicheNet_Score, breaks=seq(0, 0.35, by=0.05))) %>%
+  group_by(bin) %>%
+  summarise(mean_error = mean(BayesPrism_Error)) %>%
+  ggplot(aes(x=bin, y=mean_error)) + geom_col()
+```
+
