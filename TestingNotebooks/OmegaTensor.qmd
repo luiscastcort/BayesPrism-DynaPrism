@@ -1,0 +1,188 @@
+---
+title: "Building the Omega Tensor"
+format:
+  html:
+    code-fold: true          # ← collapsible code blocks (very nice!)
+    code-overflow: wrap
+    embed-resources: true    # ← single self-contained HTML file
+    df-print: paged          # nice tables like in R Markdown
+    toc: true                # table of contents
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    theme: cosmo             # or minty, flatly, etc. — many modern choices
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+# 0. Environment Set-Up
+
+Packages
+
+```{r}
+library(SingleCellExperiment)
+library(tidyverse)
+library(nichenetr)
+library(BayesPrism)
+library(scater)
+library(scran)
+library(biomaRt) # Get Gene Symbols from Ensembl IDs
+```
+
+Functions
+
+```{r}
+
+```
+
+Global variables
+
+```{r}
+data_dir <- "../data/"
+dir.exists(data_dir)
+```
+
+# 1. Loading data
+
+Reference data
+```{r}
+load(paste0(data_dir,"tutorial.dat/tutorial.gbm.rdata"))
+sce <- SingleCellExperiment(assays = list(counts = t(sc.dat)))
+sce$cell_type_labels <- cell.type.labels
+sce$cell_state_labels <- cell.state.labels
+rm(sc.dat, cell.state.labels, cell.type.labels, bk.dat)
+```
+
+NicheNet data
+```{r}
+# Ligand target matrix. Target genes in rows, ligands in columns.
+ligand_target_matrix <- readRDS(paste0(data_dir, "nichenetr.dat/ligand_target_matrix_nsga2r_final.rds")) 
+```
+
+# 2. Reference quality control
+
+```{r}
+sc.stat <- plot.scRNA.outlier(
+  input=t(assay(sce)), #make sure the colnames are gene symbol or ENSMEBL ID 
+  cell.type.labels=sce$cell_type_labels,
+  species="hs", #currently only human(hs) and mouse(mm) annotations are supported
+  return.raw=TRUE #return the data used for plotting. 
+  #pdf.prefix="gbm.sc.stat" specify pdf.prefix if need to output to pdf
+)
+rowData(sce) <- cbind(rowData(sce), sc.stat)
+rm(sc.stat)
+```
+
+```{r}
+# Removing ribosomal, mitochondrial and chrX  chrY genes
+sc.dat.filtered <- cleanup.genes (input=t(assay(sce)),
+                                  input.type="count.matrix",
+                                    species="hs", 
+                                    gene.group=c( "Rb","Mrp","other_Rb","chrM","MALAT1","chrX","chrY") ,
+                                    exp.cells=5)
+sce <- sce[colnames(sc.dat.filtered), ]
+rm(sc.dat.filtered)
+
+# Limiting to protein coding genes
+sc.dat.filtered.pc <-  select.gene.type (t(assay(sce)),
+                                        gene.type = "protein_coding")
+sce <- sce[colnames(sc.dat.filtered.pc), ]
+rm(sc.dat.filtered.pc)
+
+clusters <- quickCluster(sce)
+sce <- computeSumFactors(sce, cluster=clusters)
+sce <- logNormCounts(sce)
+
+# Changing rownames for gene symbols
+# rowData(sce)$EnsemblID <- rownames(sce)
+mart <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+
+gene_map <- getBM(
+  attributes = c("ensembl_gene_id", "external_gene_name"),
+  filters = "ensembl_gene_id",
+  values = gsub("\\..*", "", rownames(sce)),
+  mart = mart
+)
+
+new_names <- gene_map$external_gene_name[match(gsub("\\..*", "", rownames(sce)), gene_map$ensembl_gene_id)]
+new_names[is.na(new_names) | new_names == ""] <- rownames(sce)[is.na(new_names) | new_names == ""]
+rownames(sce) <- make.unique(new_names)
+
+rm(mart,gene_map, new_names)
+```
+
+# 3. Extract Ligand Expression
+
+```{r}
+cell_states <- names(table(sce$cell_state_labels))
+
+# Calculate Average Expression per Cell Type
+avg_expr <- aggregate(t(as.matrix(logcounts(sce[, sce$cell_state_labels %in% cell_states]))), 
+                      by=list(type=sce$cell_state_labels[sce$cell_state_labels %in% cell_states]), 
+                      FUN=mean)
+rownames(avg_expr) <- avg_expr$type
+avg_expr$type <- NULL
+```
+
+```{r}
+# Identify common ligands and target genes
+common_ligands <- intersect(colnames(ligand_target_matrix), colnames(avg_expr))
+common_genes <- intersect(rownames(ligand_target_matrix), colnames(avg_expr))
+
+# 3. Filter matrices to align them
+# L = [Sender x Ligand]
+L_matrix <- as.matrix(avg_expr[, common_ligands])
+# W = [Ligand x TargetGene]
+W_matrix <- t(as.matrix(ligand_target_matrix[common_genes, common_ligands]))
+```
+
+# 4. Compute a Sender to Gene Potential
+```{r}
+# Sender_to_Gene = [Sender x Ligand] %*% [Ligand x Gene]
+# Result size: [7 cell types x ~15,000 genes]
+sender_to_gene_potential <- L_matrix %*% W_matrix
+```
+
+# 5. Assemble the 3D Tensor
+```{r}
+# Initialize the 3D Tensor
+num_senders <- length(cell_states)
+num_receivers <- length(cell_states)
+num_genes <- length(common_genes)
+
+Omega <- array(0, 
+               dim = c(num_senders, num_receivers, num_genes),
+               dimnames = list(Sender = cell_states, 
+                               Receiver = cell_states, 
+                               Gene = common_genes))
+
+# Fill the tensor
+for(s in cell_states) {
+  # OPTIONAL: Receptor Masking
+  # Only allow ligands to contribute if Receiver 's' expresses the receptor
+  # For now, we will fill it with the global potential:
+  for(k in cell_states) {
+    if(k == s) next # Cells don't usually "interact" with themselves in this context
+    Omega[k, s, ] <- sender_to_gene_potential[k, ]
+  }
+}
+```
+
+# 6. Normalization and SCaling
+Standard BayesPrism is very sensitive to scale. The values in `ligand_target_matrix` are small (0 to 1), but when multiplied by expression, they can get large.
+To keep the Gibbs sampler stable, we usually apply a Softmax or Z-score across the genes in the tensor to ensure that we are modeling "relative" interaction pressure.
+```{r}
+# Simple scaling: ensure each [Sender x Receiver] vector has a reasonable range
+for(k in cell_states) {
+  for(s in cell_states) {
+    if(k != s) {
+      # Scale to 0-1 to prevent exponential explosion in the Gibbs sampler
+      vals <- Omega[k, s, ]
+      Omega[k, s, ] <- (vals - min(vals)) / (max(vals) - min(vals))
+    }
+  }
+}
+```
+
