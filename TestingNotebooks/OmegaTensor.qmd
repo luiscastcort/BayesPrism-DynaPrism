@@ -58,7 +58,8 @@ rm(sc.dat, cell.state.labels, cell.type.labels, bk.dat)
 NicheNet data
 ```{r}
 # Ligand target matrix. Target genes in rows, ligands in columns.
-ligand_target_matrix <- readRDS(paste0(data_dir, "nichenetr.dat/ligand_target_matrix_nsga2r_final.rds")) 
+ligand_target_matrix <- readRDS(paste0(data_dir, "nichenetr.dat/ligand_target_matrix_nsga2r_final.rds"))
+lr_network <- readRDS(paste0(data_dir, "nichenetr.dat/lr_network_human_21122021.rds"))
 ```
 
 # 2. Reference quality control
@@ -116,11 +117,13 @@ rm(mart,gene_map, new_names)
 # 3. Extract Ligand Expression
 
 ```{r}
-cell_states <- names(table(sce$cell_state_labels))
+label_col <- sce$cell_type_labels
+cell_labels <- names(table(label_col))
+
 
 # Calculate Average Expression per Cell Type
-avg_expr <- aggregate(t(as.matrix(logcounts(sce[, sce$cell_state_labels %in% cell_states]))), 
-                      by=list(type=sce$cell_state_labels[sce$cell_state_labels %in% cell_states]), 
+avg_expr <- aggregate(t(as.matrix(logcounts(sce[, label_col %in% cell_labels]))), 
+                      by=list(type=label_col[label_col %in% cell_labels]), 
                       FUN=mean)
 rownames(avg_expr) <- avg_expr$type
 avg_expr$type <- NULL
@@ -138,51 +141,106 @@ L_matrix <- as.matrix(avg_expr[, common_ligands])
 W_matrix <- t(as.matrix(ligand_target_matrix[common_genes, common_ligands]))
 ```
 
-# 4. Compute a Sender to Gene Potential
+# 4. Receptor Masking
 ```{r}
-# Sender_to_Gene = [Sender x Ligand] %*% [Ligand x Gene]
-# Result size: [7 cell types x ~15,000 genes]
-sender_to_gene_potential <- L_matrix %*% W_matrix
+# Get receptors for the ligands we are using
+relevant_lr = lr_network %>% 
+  filter(from %in% common_ligands) %>%
+  filter(to %in% rownames(sce)) # Ensure receptor exists in your data
+```
+
+```{r}
+# 2. Define a function to check if a cell type is 'responsive' to a ligand
+# We consider a cell type responsive if it expresses ANY receptor for that ligand
+# above a certain threshold (e.g., mean logcounts > 0.1)
+threshold = 0.1
+
+R_matrix <- matrix(0, 
+                   nrow = length(cell_labels), 
+                   ncol = length(common_ligands),
+                   dimnames = list(cell_labels, common_ligands))
+
+for(s in cell_labels) {
+  for(lig in common_ligands) {
+    # Get all receptors for this ligand
+    receptors = relevant_lr %>% filter(from == lig) %>% pull(to)
+    
+    # Check expression of these receptors in this cell type
+    if(length(receptors) > 0) {
+      rec_expr = avg_expr[s, receptors]
+      if(any(rec_expr > threshold)) {
+        R_matrix[s, lig] <- 1 # Hard masking: 1 if responsive, 0 if not
+        #R_matrix[s, lig] <- max(rec_expr) # Soft masking: use receptor level
+      }
+    }
+  }
+}
 ```
 
 # 5. Assemble the 3D Tensor
 ```{r}
 # Initialize the 3D Tensor
-num_senders <- length(cell_states)
-num_receivers <- length(cell_states)
+num_senders <- length(cell_labels)
+num_receivers <- length(cell_labels)
 num_genes <- length(common_genes)
 
 Omega <- array(0, 
                dim = c(num_senders, num_receivers, num_genes),
-               dimnames = list(Sender = cell_states, 
-                               Receiver = cell_states, 
+               dimnames = list(Sender = cell_labels, 
+                               Receiver = cell_labels, 
                                Gene = common_genes))
 
 # Fill the tensor
-for(s in cell_states) {
-  # OPTIONAL: Receptor Masking
-  # Only allow ligands to contribute if Receiver 's' expresses the receptor
-  # For now, we will fill it with the global potential:
-  for(k in cell_states) {
-    if(k == s) next # Cells don't usually "interact" with themselves in this context
-    Omega[k, s, ] <- sender_to_gene_potential[k, ]
+for(s in cell_labels) { # For each Receiver
+  for(k in cell_labels) { # For each Sender
+    if(k == s) next 
+    
+    # Logic: Ligands from k * Mask for s * NicheNet Weights
+    # we use element-wise multiplication for the Ligand-Mask part
+    masked_ligand_potential = L_matrix[k, ] * R_matrix[s, ]
+    
+    # Now multiply by the NicheNet Target weights
+    # [1 x Ligands] %*% [Ligands x Genes]
+    Omega[k, s, ] <- masked_ligand_potential %*% W_matrix
   }
 }
 ```
 
-# 6. Normalization and SCaling
+# 6. Normalization and Scaling
 Standard BayesPrism is very sensitive to scale. The values in `ligand_target_matrix` are small (0 to 1), but when multiplied by expression, they can get large.
 To keep the Gibbs sampler stable, we usually apply a Softmax or Z-score across the genes in the tensor to ensure that we are modeling "relative" interaction pressure.
 ```{r}
-# Simple scaling: ensure each [Sender x Receiver] vector has a reasonable range
-for(k in cell_states) {
-  for(s in cell_states) {
-    if(k != s) {
-      # Scale to 0-1 to prevent exponential explosion in the Gibbs sampler
-      vals <- Omega[k, s, ]
-      Omega[k, s, ] <- (vals - min(vals)) / (max(vals) - min(vals))
-    }
-  }
+# Option A: Global Min-Max (Preserves differences between cell pairs)
+# Only do this for the non-diagonal elements
+valid_indices <- which(Omega != 0)
+max_val <- max(Omega[valid_indices])
+min_val <- min(Omega[valid_indices])
+
+Omega[valid_indices] <- (Omega[valid_indices] - min_val) / (max_val - min_val)
+```
+
+# 7. Visualizing Omega tensor
+```{r}
+# Sum the total interaction potential for each Sender-Receiver pair
+# to see the 'Strength of the Niche'
+niche_strength <- apply(Omega, c(1,2), sum)
+
+pheatmap::pheatmap(niche_strength, 
+                   main = "Global Niche Interaction Strength (Receptor Masked)",
+                   xlab = "Receiver", ylab = "Sender")
+```
+
+
+```{r}
+# Weighting by abundance for visualization purposes
+avg_props <- table(sce$cell_type_labels) / ncol(sce)
+Weighted_Omega <- Omega
+
+for(k in names(avg_props)){
+  Weighted_Omega[k, , ] <- Weighted_Omega[k, , ] * avg_props[k]
 }
+
+niche_strength_weighted <- apply(Weighted_Omega, c(1,2), sum)
+pheatmap::pheatmap(niche_strength_weighted, main = "Effective Niche Pressure (Abundance Weighted)")
 ```
 
