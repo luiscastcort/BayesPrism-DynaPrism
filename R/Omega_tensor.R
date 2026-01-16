@@ -1,6 +1,6 @@
 avg_per_label <- function(sce, labels, assay = "logcounts"){
   stopifnot(assay %in% names(assays(sce)))
-  cell_labels <- unique(labels)
+  cell_labels <- unique(as.vector(labels))
   avg_expr <- sapply(cell_labels, function(cl){
     # Subset to the cell type
     sub_sce <- sce[, labels == cl]
@@ -12,9 +12,9 @@ avg_per_label <- function(sce, labels, assay = "logcounts"){
 
 
 
-build_Omega <- function(sce, labels, ligand_target_matrix, lr_network){
-  cell_labels <- unique(labels)
-  avg_expr <- avg_per_label(sce, labels, assay = "logcounts")
+build_Omega <- function(avg_expr, ligand_target_matrix, lr_network, mask_threshold = 0.1, masking_type = "hard"){
+  cell_labels <- rownames(avg_expr)
+  match.arg(masking_type, c("hard", "soft"))
   
   # Identify common ligands and target genes
   common_ligands <- intersect(colnames(ligand_target_matrix), colnames(avg_expr))
@@ -29,14 +29,12 @@ build_Omega <- function(sce, labels, ligand_target_matrix, lr_network){
   # Get receptors for the ligands we are using
   relevant_lr = lr_network %>% 
     filter(from %in% common_ligands) %>%
-    filter(to %in% rownames(sce)) # Ensure receptor exists in your data
+    filter(to %in% colnames(avg_expr)) # Ensure receptor exists in your data
   
   
   # Define a function to check if a cell type is 'responsive' to a ligand
   # We consider a cell type responsive if it expresses ANY receptor for that ligand
   # above a certain threshold (e.g., mean logcounts > 0.1)
-  threshold = 0.1
-  
   R_matrix <- matrix(0, 
                      nrow = length(cell_labels), 
                      ncol = length(common_ligands),
@@ -50,9 +48,12 @@ build_Omega <- function(sce, labels, ligand_target_matrix, lr_network){
       # Check expression of these receptors in this cell type
       if(length(receptors) > 0) {
         rec_expr = avg_expr[s, receptors]
-        if(any(rec_expr > threshold)) {
-          R_matrix[s, lig] <- 1 # Hard masking: 1 if responsive, 0 if not
-          #R_matrix[s, lig] <- max(rec_expr) # Soft masking: use receptor level
+        if(any(rec_expr > mask_threshold)) {
+          if(masking_type == "hard"){
+            R_matrix[s, lig] <- 1 # Hard masking: 1 if responsive, 0 if not
+          } else if(masking_type == "soft"){
+            R_matrix[s, lig] <- sum(rec_expr) # Soft masking: use receptor level
+          }
         }
       }
     }
