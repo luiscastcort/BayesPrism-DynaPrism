@@ -1,0 +1,442 @@
+---
+title: "HuukiResiduals"
+format: html
+editor: visual
+---
+
+# 0. Environment Set-Up
+
+Packages
+
+```{r}
+#| output: false
+#| warning: false
+library(BayesPrism)
+library(SingleCellExperiment)
+library(biomaRt)
+library(ggplot2)
+library(ggalign)
+library(tidyverse)
+```
+
+Functions
+
+```{r}
+source("../R/Omega_tensor.R")
+```
+
+Global variables
+
+```{r}
+data_dir <- "../data/"
+dir.exists(data_dir)
+```
+
+# 1. Loading Data
+
+Reference data
+
+```{r}
+#| output: false
+#| warning: false
+if(!dir.exists(paste0(data_dir, "Data_Huuki-Myers2025_Brain/"))){
+  sce_path_zip <- DeconvoBuddies::fetch_deconvo_data("sce")
+  unzip(sce_path_zip, exdir = paste0(data_dir, "Data_Huuki-Myers2025_Brain/"))
+  rm(sce_path_zip)
+}
+
+sce <- HDF5Array::loadHDF5SummarizedExperiment(file.path(paste0(data_dir, "Data_Huuki-Myers2025_Brain/"), "sce_DLPFC_annotated"))
+```
+
+Matched bulk data
+
+```{r}
+#| output: false
+#| warning: false
+blk <- DeconvoBuddies::fetch_deconvo_data("rse_gene")
+```
+
+NicheNet data
+
+```{r}
+# Ligand target matrix. Target genes in rows, ligands in columns.
+ligand_target_matrix <- readRDS(paste0(data_dir, "nichenetr.dat/ligand_target_matrix_nsga2r_final.rds")) 
+lr_network <- readRDS(paste0(data_dir, "nichenetr.dat/lr_network_human_21122021.rds"))
+```
+
+# 2. Reference quality control
+
+Getting lists of cell types and cell states.
+
+```{r}
+# Removing ambiguous cell type
+cell_types <- names(table(sce$cellType_broad_hc))
+cell_types <- cell_types[!cell_types %in% c("Ambiguous")]
+sce <- sce[, sce$cellType_broad_hc %in% cell_types]
+cell_states <- unique(as.vector(sce$cellType_hc))
+```
+
+Graphing correlation across cell states
+
+```{r}
+#| cache: true
+plot.cor.phi (input=t(counts(sce)),
+              input.labels=sce$cellType_hc,
+              title="cell state correlation",
+              #specify pdf.prefix if need to output to pdf
+              #pdf.prefix="gbm.cor.cs", 
+              cexRow=0.2, cexCol=0.2,
+              margins=c(2,2))
+```
+
+Graphing correlation across cell types
+
+```{r}
+#| cache: true
+plot.cor.phi (input=t(counts(sce)),
+              input.labels=sce$cellType_broad_hc, 
+              title="cell type correlation",
+              #specify pdf.prefix if need to output to pdf
+              #pdf.prefix="gbm.cor.ct",
+              cexRow=0.5, cexCol=0.5,
+              )
+```
+
+Getting and plotting gene statistics
+
+```{r}
+#| cache: true
+rownames(sce) <- make.unique(rownames(sce))
+sc.stat <- plot.scRNA.outlier(
+  input=t(assay(sce)), #make sure the colnames are gene symbol or ENSMEBL ID 
+  cell.type.labels=sce$cellType_broad_hc,
+  species="hs", #currently only human(hs) and mouse(mm) annotations are supported
+  return.raw=TRUE #return the data used for plotting. 
+  #pdf.prefix="gbm.sc.stat" specify pdf.prefix if need to output to pdf
+)
+rowData(sce) <- cbind(rowData(sce), sc.stat)
+rm(sc.stat)
+```
+
+Gene-level QC
+
+```{r}
+#| eval: false
+# Removing ribosomal, mitochondrial and chrX  chrY genes
+sc.dat.filtered <- cleanup.genes (input=t(assay(sce)),
+                                  input.type="count.matrix",
+                                    species="hs", 
+                                    gene.group=c( "Rb","Mrp","other_Rb","chrM","MALAT1","chrX","chrY") ,
+                                    exp.cells=5)
+sce <- sce[colnames(sc.dat.filtered), ]
+rm(sc.dat.filtered)
+
+# Limiting to protein coding genes
+sc.dat.filtered.pc <-  select.gene.type (t(assay(sce)),
+                                        gene.type = "protein_coding")
+sce <- sce[colnames(sc.dat.filtered.pc), ]
+rm(sc.dat.filtered.pc)
+save(sce, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", "sce.rdata"))
+```
+
+Loading QC-filtered SingeCellExperiment object (`sce`)
+
+```{r}
+load(paste0(data_dir, "NotebookRData/HuukiResiduals/", "sce.rdata"))
+```
+
+# 3. BayesPrism
+
+Defining sample
+
+```{r}
+br_num = "Br2720"
+position = "post"
+sample = paste0(br_num,"_",position)
+
+rownames(blk) <- rowData(blk)$Symbol
+blk_sample = blk[intersect(rownames(sce), rownames(blk)),blk$Sample==sample]
+```
+
+Initializing Prism object
+
+```{r}
+#| eval: false
+myPrism <- new.prism(
+  reference=t(as.matrix(counts(sce[rownames(blk_sample),]))), 
+  mixture=t(assay(blk_sample)),
+  input.type="count.matrix", 
+  cell.type.labels = sce$cellType_broad_hc, 
+  cell.state.labels = sce$cellType_hc,
+  key = NULL,
+  outlier.cut=0.01,
+    outlier.fraction=0.1,
+)
+save(myPrism, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", "myPrism_", sample, ".rdata"))
+```
+
+Running BayesPrism
+
+```{r}
+#| eval: false
+bp_res <- run.prism(prism = myPrism, n.cores=14)
+save(bp_res, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", "bp_res_", sample, ".rdata"))
+```
+
+Loading stored BayesPrism prism object (`myPrism`) and results (`bp_res`)
+
+```{r}
+load(paste0(data_dir, "NotebookRData/HuukiResiduals/", "myPrism_", sample, ".rdata"))
+load(paste0(data_dir, "NotebookRData/HuukiResiduals/", "bp_res_", sample, ".rdata"))
+```
+
+# 4. Calculating Residuals
+
+Bulk sample selection
+
+```{r}
+lib_prep <- "Bulk"
+lib_type <- "polyA"
+```
+
+Calculating expressions per cell state
+
+-   `inf_exp_mtx`: BayesPrism-inferred CTSE in bulk RNA-seq data from `{r} sample`
+-   `true_exp_mtx`: CTSE in matched snRNA-seq data from `{r} sample`
+
+```{r}
+#| eval: false
+inf_exp_mtx <- matrix(nrow = length(cell_states), 
+                       ncol = length(colnames(bp_res@prism@mixture)),
+                       dimnames = list(cell_states, colnames(bp_res@prism@mixture)))
+
+true_exp_mtx <- matrix(nrow = length(cell_states), 
+                       ncol = length(rownames(sce)),
+                       dimnames = list(cell_states, rownames(sce)))
+
+for (rec in cell_states){
+  ids <- colnames(blk_sample[,blk_sample$library_prep == lib_prep & blk_sample$library_type == lib_type])
+  rec_idx <- colnames(sce)[sce$cellType_hc == rec & sce$Sample == sample]
+  
+  inferred_rec_exp <- get.exp(bp_res, state.or.type = "state", cell.name = rec)[ids,colnames(inf_exp_mtx)]
+  true_rec_exp <- rowSums(as.matrix(counts(sce[colnames(true_exp_mtx), rec_idx])))
+  
+  inf_exp_mtx[rec, ] <- inferred_rec_exp
+  true_exp_mtx[rec, ] <- true_rec_exp
+}
+
+save(inf_exp_mtx, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", 
+                              "inf_exp_mtx_", sample, "_", lib_prep, "_", lib_type,".rdata"))
+save(true_exp_mtx, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", 
+                               "true_exp_mtx_", sample, "_", lib_prep, "_", lib_type,".rdata"))
+```
+
+Loading stored expression matrices
+
+```{r}
+load(paste0(data_dir, "NotebookRData/HuukiResiduals/", 
+                              "inf_exp_mtx_", sample, "_", lib_prep, "_", lib_type,".rdata"))
+load(paste0(data_dir, "NotebookRData/HuukiResiduals/", 
+                              "true_exp_mtx_", sample, "_", lib_prep, "_", lib_type,".rdata"))
+```
+
+Calculating CPM and residuals
+
+```{r}
+inf_cpm_mtx <- (inf_exp_mtx/rowSums(inf_exp_mtx)) * 1e6
+true_cpm_mtx <- (true_exp_mtx/rowSums(true_exp_mtx)) * 1e6
+
+residual_mtx <- true_cpm_mtx[cell_states, colnames(inf_cpm_mtx)] - inf_cpm_mtx[cell_states, ]
+```
+
+# 5. Getting Omega Tensor
+
+## 5.1 Getting average expression matrices
+
+Generating and saving average expression matrices
+
+```{r}
+#| eval: false
+# Getting average expression per cell type
+avg_type_expr <- avg_per_label(sce, sce$cellType_broad_hc, assay = "logcounts")
+save(avg_type_expr, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", "avg_type_expr.rdata"))
+
+# Getting average expression per cell state
+avg_state_expr <- avg_per_label(sce, sce$cellType_hc, assay = "logcounts")
+save(avg_state_expr, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", "avg_state_expr.rdata"))
+```
+
+Loading average expression matrices
+
+```{r}
+load(paste0(data_dir, "NotebookRData/HuukiResiduals/", "avg_type_expr.rdata"))
+load(paste0(data_dir, "NotebookRData/HuukiResiduals/", "avg_state_expr.rdata"))
+```
+
+## 5.2 Omega tensor
+
+```{r}
+Omega <- build_Omega(avg_state_expr, ligand_target_matrix, lr_network, mask_threshold = 0.5, masking_type = "soft")
+niche_strength <- apply(Omega, c(1,2), sum)
+gene_pressure <- apply(Omega, c(2,3), sum)
+```
+
+Visualization
+
+```{r}
+#| label: fig-niche_strength
+#| fig-cap: "Heatmap of interaction strength across cell states."
+ggheatmap(niche_strength) + 
+  layout_title("Global Niche Interaction Strength") +
+  labs(x = "Receiver", y = "Sender") + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  anno_right(size = 0.2) +
+  align_dendro()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)) +
+  anno_top(size = 0.3) +
+  align_dendro()
+```
+
+## 5.3 Weighted Omega Tensor
+
+```{r}
+avg_props <- table(sce$cellType_hc) / ncol(sce)
+Weighted_Omega <- Omega
+
+for(k in cell_states){
+  Weighted_Omega[k, , ] <- Weighted_Omega[k, , ] * avg_props[k]
+}
+
+niche_strength_weighted <- apply(Weighted_Omega, c(1,2), sum)
+weighted_gene_pressure <- apply(Weighted_Omega, c(2,3), sum)
+```
+
+Visualization
+
+```{r}
+#| label: fig-weighted_niche_strength
+#| fig-cap: "Heatmap of weighted interaction strength across cell states."
+ggheatmap(niche_strength_weighted) + 
+  layout_title("Effective Niche Pressure") +
+  labs(x = "Receiver", y = "Sender") + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  anno_right(size = 0.2) +
+  align_dendro() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)) +
+  anno_top(size = 0.3) +
+  align_dendro()
+```
+
+# 6. Checking gene pressure effect on BayesPrism residuals
+
+Making a dataframe containing residual and gene pressure data for all states
+
+```{r}
+results_list <- list()
+common_genes <- intersect(colnames(gene_pressure), colnames(residual_mtx))
+
+for(type in names(bp_res@prism@map)){
+  for (state in bp_res@prism@map[[type]]){
+    
+    # Check if state exists in the matrix and has non-NA data
+    if (state %in% rownames(residual_mtx) && sum(!is.na(residual_mtx[state, ])) != 0) {
+      # Filter to expressed genes per cell type
+      expressed_genes <- intersect(common_genes, colnames(true_cpm_mtx)[true_cpm_mtx[state, ] >= quantile(true_cpm_mtx[state,], 0.1)])
+      
+      tmp <- data.frame(
+        type = type,
+        state = state,
+        gene = expressed_genes,
+        gene_pressure = as.numeric(gene_pressure[state, expressed_genes]),
+        weighted_gene_pressure = as.numeric(weighted_gene_pressure[state, expressed_genes]),
+        residual = as.numeric(residual_mtx[state, expressed_genes]),
+        stringsAsFactors = FALSE
+      )
+      
+      results_list[[length(results_list) + 1]] <- tmp
+    }
+  }
+}
+
+aggregated_df <- do.call(rbind, results_list)
+```
+
+Making a dataframe for plotting
+
+```{r}
+types_to_plot <- c(
+  "Astro", 
+  "EndoMural", 
+  "Micro", 
+  "Oligo", 
+  "OPC", 
+  "Inhib",
+  "Excit"
+  )
+#types_to_plot <- c("Micro")
+#states_to_plot <- c("Excit_09", "Excit_05", "Excit_10")
+
+plot_df <- aggregated_df[aggregated_df$type %in% types_to_plot #& aggregated_df$gene_pressure < 4
+                         , ]
+plot_df$residual <- abs(plot_df$residual)
+
+cor.test((plot_df$residual), plot_df$gene_pressure, method="spearman")
+```
+
+Gene pressre plots
+
+```{r}
+ggside(plot_df, mapping = aes(gene_pressure, (residual), colour = type)) -
+  scheme_theme(theme_bw()) +
+  layout_theme(panel.border = element_blank()) +
+  geom_point(alpha = 0.5, size = 0.5) +
+  geom_smooth(method = "lm", color = "darkgray") +
+  labs(x = "Gene Pressure", y = "AbsError") +
+  # Bar plot
+  anno_top(size = 1) +
+  ggalign() +
+  stat_summary_bin(
+    mapping = aes(x = gene_pressure, y = (residual), fill = after_stat(count)),
+    bins = 50,
+    geom = "bar",
+    fun.data = function(x) {
+      data.frame(
+        y = mean(x),
+        count = length(x)
+      )
+    }
+  ) +
+  scale_fill_gradient(low = "lightgrey", high = "#08306b", name = "Gene Count") +
+  labs(title = paste("Effect of Gene Pressure on BayesPrism Error"), 
+       y = "Mean AbsError")
+```
+
+Weighted gene pressure plots
+
+```{r}
+cor.test((plot_df$residual), plot_df$weighted_gene_pressure, method="spearman")
+
+ggside(plot_df, mapping = aes(weighted_gene_pressure, (residual), colour = type)) -
+  scheme_theme(theme_bw()) +
+  layout_theme(panel.border = element_blank()) +
+  geom_point(alpha = 0.5, size = 0.5) +
+  geom_smooth(method = "lm", color = "darkgray") +
+  labs(x = "Weighted Gene Pressure", y = "AbsError") +
+  # Bar plot
+  anno_top(size = 1) +
+  ggalign() +
+  stat_summary_bin(
+    mapping = aes(x = weighted_gene_pressure, y = (residual), fill = after_stat(count)),
+    bins = 50,
+    geom = "bar",
+    fun.data = function(x) {
+      data.frame(
+        y = mean(x),
+        count = length(x)
+      )
+    }
+  ) +
+  scale_fill_gradient(low = "lightgrey", high = "#08306b", name = "Gene Count") +
+  labs(title = paste("Effect of Weighted Gene Pressure on BayesPrism Error"), 
+       y = "Mean AbsError")
+```
