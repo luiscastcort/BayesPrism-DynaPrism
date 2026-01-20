@@ -88,10 +88,9 @@ build_Omega <- function(avg_expr, ligand_target_matrix, lr_network, mask_thresho
   # Normalize with Global Min-Max (Preserves differences between cell pairs)
   # Only do this for the non-diagonal elements
   valid_indices <- which(Omega != 0)
-  max_val <- max(Omega[valid_indices])
-  min_val <- min(Omega[valid_indices])
+  max_val <- max(abs(Omega[valid_indices]))
   
-  Omega[valid_indices] <- (Omega[valid_indices] - min_val) / (max_val - min_val)
+  Omega[valid_indices] <- (Omega[valid_indices]) / abs(max_val)
   
   return(Omega)
 }
