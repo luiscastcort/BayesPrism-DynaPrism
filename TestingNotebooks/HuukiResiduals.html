@@ -108,7 +108,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(biomaRt)</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggalign)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(scuttle)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(scales)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(colorspace)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(Hmisc)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(data.table)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Functions</p>
 <div class="cell">
@@ -166,9 +171,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>              <span class="at">cexRow=</span><span class="fl">0.2</span>, <span class="at">cexCol=</span><span class="fl">0.2</span>,</span>
 <span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>              <span class="at">margins=</span><span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">2</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="HuukiResiduals_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="672"></p>
+<div id="fig-state_correlations" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-state_correlations-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="HuukiResiduals_files/figure-html/fig-state_correlations-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-state_correlations-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: Heatmap of expression correlation across cell states.
+</figcaption>
 </figure>
 </div>
 </div>
@@ -183,9 +193,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>              <span class="at">cexRow=</span><span class="fl">0.5</span>, <span class="at">cexCol=</span><span class="fl">0.5</span>,</span>
 <span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>              )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="HuukiResiduals_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="672"></p>
+<div id="fig-type_correlations" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-type_correlations-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="HuukiResiduals_files/figure-html/fig-type_correlations-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-type_correlations-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: Heatmap of expression correlation across cell types.
+</figcaption>
 </figure>
 </div>
 </div>
@@ -203,15 +218,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output cell-output-stdout">
 <pre><code>Gene symbols detected. Recommend to use EMSEMBLE IDs for more unique mapping.</code></pre>
 </div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">rowData</span>(sce) <span class="ot">&lt;-</span> <span class="fu">cbind</span>(<span class="fu">rowData</span>(sce), sc.stat)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(sc.stat)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="HuukiResiduals_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="672"></p>
+<div id="fig-specificty" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-specificty-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="HuukiResiduals_files/figure-html/fig-specificty-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-specificty-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: Gene specificity plot. Ribosomal, mitochondrial and chrX chrY genes have high abundance but low specificity. They may be excluded from the analysis.
+</figcaption>
 </figure>
 </div>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">rowData</span>(sce) <span class="ot">&lt;-</span> <span class="fu">cbind</span>(<span class="fu">rowData</span>(sce), sc.stat)</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(sc.stat)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Gene-level QC</p>
 <div class="cell">
@@ -271,13 +291,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, <span class="st">"myPrism_"</span>, sample, <span class="st">".rdata"</span>))</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, <span class="st">"bp_res_"</span>, sample, <span class="st">".rdata"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
+<p>Color Mapping</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>type_colors <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">Inhib =</span> <span class="st">"#369acc"</span>, </span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">Oligo =</span> <span class="st">"#f8e16f"</span>, </span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">OPC =</span> <span class="st">"#6c584c"</span>, </span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">Excit =</span> <span class="st">"#95cf92"</span>, </span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">Astro =</span> <span class="st">"#9656a2"</span>, </span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">EndoMural =</span> <span class="st">"#f4895f"</span>, </span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">Micro =</span> <span class="st">"#de324c"</span></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>state_colors <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(<span class="fu">names</span>(bp_res<span class="sc">@</span>prism<span class="sc">@</span>map), <span class="cf">function</span>(cell_type) {</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>  states <span class="ot">&lt;-</span> bp_res<span class="sc">@</span>prism<span class="sc">@</span>map[[cell_type]]</span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>  base_col <span class="ot">&lt;-</span> type_colors[cell_type]</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>  shades <span class="ot">&lt;-</span> <span class="fu">colorRampPalette</span>(<span class="fu">c</span>(<span class="fu">lighten</span>(base_col, <span class="fl">0.4</span>), <span class="fu">darken</span>(base_col, <span class="fl">0.4</span>)))(<span class="fu">length</span>(states))</span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(shades) <span class="ot">&lt;-</span> states</span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(shades)</span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>}))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
 </section>
 <section id="calculating-residuals" class="level1">
 <h1>4. Calculating Residuals</h1>
 <p>Bulk sample selection</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>lib_prep <span class="ot">&lt;-</span> <span class="st">"Bulk"</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>lib_type <span class="ot">&lt;-</span> <span class="st">"polyA"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>lib_prep <span class="ot">&lt;-</span> <span class="st">"Bulk"</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>lib_type <span class="ot">&lt;-</span> <span class="st">"polyA"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Calculating expressions per cell state</p>
 <ul>
@@ -285,43 +327,43 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><code>true_exp_mtx</code>: CTSE in matched snRNA-seq data from Br2720_post</li>
 </ul>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>inf_exp_mtx <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="at">nrow =</span> <span class="fu">length</span>(cell_states), </span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>                       <span class="at">ncol =</span> <span class="fu">length</span>(<span class="fu">colnames</span>(bp_res<span class="sc">@</span>prism<span class="sc">@</span>mixture)),</span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>                       <span class="at">dimnames =</span> <span class="fu">list</span>(cell_states, <span class="fu">colnames</span>(bp_res<span class="sc">@</span>prism<span class="sc">@</span>mixture)))</span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>true_exp_mtx <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="at">nrow =</span> <span class="fu">length</span>(cell_states), </span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>                       <span class="at">ncol =</span> <span class="fu">length</span>(<span class="fu">rownames</span>(sce)),</span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>                       <span class="at">dimnames =</span> <span class="fu">list</span>(cell_states, <span class="fu">rownames</span>(sce)))</span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (rec <span class="cf">in</span> cell_states){</span>
-<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  ids <span class="ot">&lt;-</span> <span class="fu">colnames</span>(blk_sample[,blk_sample<span class="sc">$</span>library_prep <span class="sc">==</span> lib_prep <span class="sc">&amp;</span> blk_sample<span class="sc">$</span>library_type <span class="sc">==</span> lib_type])</span>
-<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  rec_idx <span class="ot">&lt;-</span> <span class="fu">colnames</span>(sce)[sce<span class="sc">$</span>cellType_hc <span class="sc">==</span> rec <span class="sc">&amp;</span> sce<span class="sc">$</span>Sample <span class="sc">==</span> sample]</span>
-<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>  inferred_rec_exp <span class="ot">&lt;-</span> <span class="fu">get.exp</span>(bp_res, <span class="at">state.or.type =</span> <span class="st">"state"</span>, <span class="at">cell.name =</span> rec)[ids,<span class="fu">colnames</span>(inf_exp_mtx)]</span>
-<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>  true_rec_exp <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(<span class="fu">as.matrix</span>(<span class="fu">counts</span>(sce[<span class="fu">colnames</span>(true_exp_mtx), rec_idx])))</span>
-<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>  inf_exp_mtx[rec, ] <span class="ot">&lt;-</span> inferred_rec_exp</span>
-<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>  true_exp_mtx[rec, ] <span class="ot">&lt;-</span> true_rec_exp</span>
-<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(inf_exp_mtx, <span class="at">file=</span><span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, </span>
-<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>                              <span class="st">"inf_exp_mtx_"</span>, sample, <span class="st">"_"</span>, lib_prep, <span class="st">"_"</span>, lib_type,<span class="st">".rdata"</span>))</span>
-<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(true_exp_mtx, <span class="at">file=</span><span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, </span>
-<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a>                               <span class="st">"true_exp_mtx_"</span>, sample, <span class="st">"_"</span>, lib_prep, <span class="st">"_"</span>, lib_type,<span class="st">".rdata"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>inf_exp_mtx <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="at">nrow =</span> <span class="fu">length</span>(cell_states), </span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>                       <span class="at">ncol =</span> <span class="fu">length</span>(<span class="fu">colnames</span>(bp_res<span class="sc">@</span>prism<span class="sc">@</span>mixture)),</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>                       <span class="at">dimnames =</span> <span class="fu">list</span>(cell_states, <span class="fu">colnames</span>(bp_res<span class="sc">@</span>prism<span class="sc">@</span>mixture)))</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>true_exp_mtx <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="at">nrow =</span> <span class="fu">length</span>(cell_states), </span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>                       <span class="at">ncol =</span> <span class="fu">length</span>(<span class="fu">rownames</span>(sce)),</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>                       <span class="at">dimnames =</span> <span class="fu">list</span>(cell_states, <span class="fu">rownames</span>(sce)))</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (rec <span class="cf">in</span> cell_states){</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>  ids <span class="ot">&lt;-</span> <span class="fu">colnames</span>(blk_sample[,blk_sample<span class="sc">$</span>library_prep <span class="sc">==</span> lib_prep <span class="sc">&amp;</span> blk_sample<span class="sc">$</span>library_type <span class="sc">==</span> lib_type])</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>  rec_idx <span class="ot">&lt;-</span> <span class="fu">colnames</span>(sce)[sce<span class="sc">$</span>cellType_hc <span class="sc">==</span> rec <span class="sc">&amp;</span> sce<span class="sc">$</span>Sample <span class="sc">==</span> sample]</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>  inferred_rec_exp <span class="ot">&lt;-</span> <span class="fu">get.exp</span>(bp_res, <span class="at">state.or.type =</span> <span class="st">"state"</span>, <span class="at">cell.name =</span> rec)[ids,<span class="fu">colnames</span>(inf_exp_mtx)]</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>  true_rec_exp <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(<span class="fu">as.matrix</span>(<span class="fu">counts</span>(sce[<span class="fu">colnames</span>(true_exp_mtx), rec_idx])))</span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>  inf_exp_mtx[rec, ] <span class="ot">&lt;-</span> inferred_rec_exp</span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>  true_exp_mtx[rec, ] <span class="ot">&lt;-</span> true_rec_exp</span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(inf_exp_mtx, <span class="at">file=</span><span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, </span>
+<span id="cb22-21"><a href="#cb22-21" aria-hidden="true" tabindex="-1"></a>                              <span class="st">"inf_exp_mtx_"</span>, sample, <span class="st">"_"</span>, lib_prep, <span class="st">"_"</span>, lib_type,<span class="st">".rdata"</span>))</span>
+<span id="cb22-22"><a href="#cb22-22" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(true_exp_mtx, <span class="at">file=</span><span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, </span>
+<span id="cb22-23"><a href="#cb22-23" aria-hidden="true" tabindex="-1"></a>                               <span class="st">"true_exp_mtx_"</span>, sample, <span class="st">"_"</span>, lib_prep, <span class="st">"_"</span>, lib_type,<span class="st">".rdata"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Loading stored expression matrices</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, </span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>                              <span class="st">"inf_exp_mtx_"</span>, sample, <span class="st">"_"</span>, lib_prep, <span class="st">"_"</span>, lib_type,<span class="st">".rdata"</span>))</span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, </span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>                              <span class="st">"true_exp_mtx_"</span>, sample, <span class="st">"_"</span>, lib_prep, <span class="st">"_"</span>, lib_type,<span class="st">".rdata"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, </span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>                              <span class="st">"inf_exp_mtx_"</span>, sample, <span class="st">"_"</span>, lib_prep, <span class="st">"_"</span>, lib_type,<span class="st">".rdata"</span>))</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, </span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>                              <span class="st">"true_exp_mtx_"</span>, sample, <span class="st">"_"</span>, lib_prep, <span class="st">"_"</span>, lib_type,<span class="st">".rdata"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Calculating CPM and residuals</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>inf_cpm_mtx <span class="ot">&lt;-</span> (inf_exp_mtx<span class="sc">/</span><span class="fu">rowSums</span>(inf_exp_mtx)) <span class="sc">*</span> <span class="fl">1e6</span></span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>true_cpm_mtx <span class="ot">&lt;-</span> (true_exp_mtx<span class="sc">/</span><span class="fu">rowSums</span>(true_exp_mtx)) <span class="sc">*</span> <span class="fl">1e6</span></span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>residual_mtx <span class="ot">&lt;-</span> true_cpm_mtx[cell_states, <span class="fu">colnames</span>(inf_cpm_mtx)] <span class="sc">-</span> inf_cpm_mtx[cell_states, ]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>inf_cpm_mtx <span class="ot">&lt;-</span> (inf_exp_mtx<span class="sc">/</span><span class="fu">rowSums</span>(inf_exp_mtx)) <span class="sc">*</span> <span class="fl">1e6</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>true_cpm_mtx <span class="ot">&lt;-</span> (true_exp_mtx<span class="sc">/</span><span class="fu">rowSums</span>(true_exp_mtx)) <span class="sc">*</span> <span class="fl">1e6</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>residual_mtx <span class="ot">&lt;-</span> true_cpm_mtx[cell_states, <span class="fu">colnames</span>(inf_cpm_mtx)] <span class="sc">-</span> inf_cpm_mtx[cell_states, ]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="getting-omega-tensor" class="level1">
@@ -330,38 +372,250 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="getting-average-expression-matrices">5.1 Getting average expression matrices</h2>
 <p>Generating and saving average expression matrices</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Getting average expression per cell type</span></span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>avg_type_expr <span class="ot">&lt;-</span> <span class="fu">avg_per_label</span>(sce, sce<span class="sc">$</span>cellType_broad_hc, <span class="at">assay =</span> <span class="st">"logcounts"</span>)</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(avg_type_expr, <span class="at">file=</span><span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, <span class="st">"avg_type_expr.rdata"</span>))</span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Getting average expression per cell state</span></span>
-<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>avg_state_expr <span class="ot">&lt;-</span> <span class="fu">avg_per_label</span>(sce, sce<span class="sc">$</span>cellType_hc, <span class="at">assay =</span> <span class="st">"logcounts"</span>)</span>
-<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(avg_state_expr, <span class="at">file=</span><span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, <span class="st">"avg_state_expr.rdata"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Getting average expression per cell type</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>avg_type_expr <span class="ot">&lt;-</span> <span class="fu">avg_per_label</span>(sce, sce<span class="sc">$</span>cellType_broad_hc, <span class="at">assay =</span> <span class="st">"logcounts"</span>)</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(avg_type_expr, <span class="at">file=</span><span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, <span class="st">"avg_type_expr.rdata"</span>))</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Getting average expression per cell state</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>avg_state_expr <span class="ot">&lt;-</span> <span class="fu">avg_per_label</span>(sce, sce<span class="sc">$</span>cellType_hc, <span class="at">assay =</span> <span class="st">"logcounts"</span>)</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(avg_state_expr, <span class="at">file=</span><span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, <span class="st">"avg_state_expr.rdata"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Loading average expression matrices</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, <span class="st">"avg_type_expr.rdata"</span>))</span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, <span class="st">"avg_state_expr.rdata"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, <span class="st">"avg_type_expr.rdata"</span>))</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, <span class="st">"avg_state_expr.rdata"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="directionality" class="level2">
+<h2 class="anchored" data-anchor-id="directionality">5.2 Directionality</h2>
+<p>Getting average expression per sample per cell type</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>state_sample_means <span class="ot">&lt;-</span> <span class="fu">aggregateAcrossCells</span>(sce, </span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>                                           <span class="at">ids =</span> <span class="fu">colData</span>(sce)[, <span class="fu">c</span>(<span class="st">"Sample"</span>, <span class="st">"cellType_hc"</span>)], </span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>                                           <span class="at">statistics =</span> <span class="st">"mean"</span>,</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>                                           <span class="at">use.assay.type =</span> <span class="st">"logcounts"</span>)</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(state_sample_means, <span class="at">file=</span><span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, <span class="st">"state_sample_means.rdata"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/"</span>, <span class="st">"state_sample_means.rdata"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>expr_mat <span class="ot">&lt;-</span> <span class="fu">assays</span>(state_sample_means)<span class="sc">$</span>logcounts</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>meta <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(<span class="fu">colData</span>(state_sample_means))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Getting ligand-target correlations across cell states</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>ligand_genes <span class="ot">&lt;-</span> <span class="fu">intersect</span>(<span class="fu">colnames</span>(ligand_target_matrix), <span class="fu">colnames</span>(avg_state_expr))</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>target_genes <span class="ot">&lt;-</span> <span class="fu">intersect</span>(<span class="fu">rownames</span>(ligand_target_matrix), <span class="fu">colnames</span>(avg_state_expr))</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>valid_states <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">table</span>(state_sample_means<span class="sc">$</span>cellType_hc)[<span class="fu">table</span>(state_sample_means<span class="sc">$</span>cellType_hc) <span class="sc">&gt;</span> <span class="dv">4</span>])</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>sub_expr <span class="ot">&lt;-</span> expr_mat[<span class="fu">unique</span>(<span class="fu">c</span>(ligand_genes, target_genes)), ]</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Function to get correlations for a specific cell state</span></span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>get_state_correlations <span class="ot">&lt;-</span> <span class="cf">function</span>(cell_state) {</span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>  cells <span class="ot">&lt;-</span> <span class="fu">which</span>(meta<span class="sc">$</span>cellType_hc <span class="sc">==</span> cell_state)</span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>  mat <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">as.matrix</span>(sub_expr[, cells]))</span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>  cor_obj <span class="ot">&lt;-</span> <span class="fu">rcorr</span>(mat, <span class="at">type =</span> <span class="st">"spearman"</span>)</span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>  r_matrix <span class="ot">&lt;-</span> cor_obj<span class="sc">$</span>r[ligand_genes, target_genes]</span>
+<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>  p_matrix <span class="ot">&lt;-</span> cor_obj<span class="sc">$</span>P[ligand_genes, target_genes]</span>
+<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb30-18"><a href="#cb30-18" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb30-19"><a href="#cb30-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">ligand =</span> <span class="fu">rep</span>(<span class="fu">rownames</span>(r_matrix), <span class="fu">ncol</span>(r_matrix)),</span>
+<span id="cb30-20"><a href="#cb30-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">target =</span> <span class="fu">rep</span>(<span class="fu">colnames</span>(r_matrix), <span class="at">each =</span> <span class="fu">nrow</span>(r_matrix)),</span>
+<span id="cb30-21"><a href="#cb30-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">cor    =</span> <span class="fu">as.vector</span>(r_matrix),</span>
+<span id="cb30-22"><a href="#cb30-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">pval   =</span> <span class="fu">as.vector</span>(p_matrix),</span>
+<span id="cb30-23"><a href="#cb30-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">state  =</span> cell_state,</span>
+<span id="cb30-24"><a href="#cb30-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span></span>
+<span id="cb30-25"><a href="#cb30-25" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb30-26"><a href="#cb30-26" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb30-27"><a href="#cb30-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(df)</span>
+<span id="cb30-28"><a href="#cb30-28" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_along</span>(valid_states)) {</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  current_state <span class="ot">&lt;-</span> valid_states[i]</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"[%d/%d] Processing State: %s... </span><span class="sc">\n</span><span class="st">"</span>, i, <span class="fu">length</span>(valid_states), current_state))</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">file.exists</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/correlation_results/"</span>, </span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>                            current_state, <span class="st">"_cors.rds"</span>))){<span class="cf">next</span>}</span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>  res <span class="ot">&lt;-</span> <span class="fu">get_state_correlations</span>(current_state)</span>
+<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">saveRDS</span>(res, <span class="at">file =</span> <span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/correlation_results/"</span>, </span>
+<span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a>                             current_state, <span class="st">"_cors.rds"</span>))</span>
+<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb31-14"><a href="#cb31-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rm</span>(res)</span>
+<span id="cb31-15"><a href="#cb31-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">gc</span>()</span>
+<span id="cb31-16"><a href="#cb31-16" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1/27] Processing State: Astro... 
+[2/27] Processing State: EndoMural_01... 
+[3/27] Processing State: EndoMural_02... 
+[4/27] Processing State: Micro... 
+[5/27] Processing State: Oligo_01... 
+[6/27] Processing State: Oligo_02... 
+[7/27] Processing State: Oligo_03... 
+[8/27] Processing State: OPC... 
+[9/27] Processing State: Excit_01... 
+[10/27] Processing State: Excit_02... 
+[11/27] Processing State: Excit_03... 
+[12/27] Processing State: Excit_04... 
+[13/27] Processing State: Excit_05... 
+[14/27] Processing State: Excit_06... 
+[15/27] Processing State: Excit_07... 
+[16/27] Processing State: Excit_08... 
+[17/27] Processing State: Excit_09... 
+[18/27] Processing State: Excit_10... 
+[19/27] Processing State: Excit_13... 
+[20/27] Processing State: Excit_14... 
+[21/27] Processing State: Excit_15... 
+[22/27] Processing State: Inhib_01... 
+[23/27] Processing State: Inhib_02... 
+[24/27] Processing State: Inhib_03... 
+[25/27] Processing State: Inhib_04... 
+[26/27] Processing State: Inhib_05... 
+[27/27] Processing State: Inhib_06... </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>result_files <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/HuukiResiduals/correlation_results/"</span>), <span class="at">pattern =</span> <span class="st">"</span><span class="sc">\\</span><span class="st">.rds$"</span>, <span class="at">full.names =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>all_cors_dt <span class="ot">&lt;-</span> <span class="fu">rbindlist</span>(<span class="fu">lapply</span>(result_files, <span class="cf">function</span>(f) {</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  tmp <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(f)</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>  tmp <span class="ot">&lt;-</span> tmp[<span class="sc">!</span><span class="fu">is.na</span>(tmp<span class="sc">$</span>cor),]</span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(<span class="fu">as.data.table</span>(tmp)) </span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>}))</span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a><span class="fu">setkey</span>(all_cors_dt, ligand, target, state)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Define directionality consensus scores across cell states</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>consensus_summary <span class="ot">&lt;-</span> all_cors_dt[, {</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>  z_vals <span class="ot">&lt;-</span> <span class="fu">qnorm</span>(<span class="fu">pmax</span>(pval, <span class="fl">1e-300</span>) <span class="sc">/</span> <span class="dv">2</span>, <span class="at">lower.tail =</span> <span class="cn">FALSE</span>) <span class="sc">*</span> <span class="fu">sign</span>(cor)</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>  stouffer_z <span class="ot">&lt;-</span> <span class="fu">sum</span>(z_vals, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">/</span> <span class="fu">sqrt</span>(.N)</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>  pos_count <span class="ot">&lt;-</span> <span class="fu">sum</span>(cor <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>  neg_count <span class="ot">&lt;-</span> <span class="fu">sum</span>(cor <span class="sc">&lt;</span> <span class="dv">0</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>  consistency <span class="ot">&lt;-</span> <span class="fu">max</span>(pos_count, neg_count) <span class="sc">/</span> .N</span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>  global_dir <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(pos_count <span class="sc">&gt;=</span> neg_count, <span class="dv">1</span>, <span class="sc">-</span><span class="dv">1</span>)</span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a>  .(</span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_states      =</span> .N,</span>
+<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">consensus_z   =</span> stouffer_z,</span>
+<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">consistency   =</span> consistency,</span>
+<span id="cb34-16"><a href="#cb34-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">global_dir    =</span> global_dir,</span>
+<span id="cb34-17"><a href="#cb34-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">avg_cor       =</span> <span class="fu">mean</span>(cor, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb34-18"><a href="#cb34-18" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb34-19"><a href="#cb34-19" aria-hidden="true" tabindex="-1"></a>}, by <span class="ot">=</span> .(ligand, target)]</span>
+<span id="cb34-20"><a href="#cb34-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-21"><a href="#cb34-21" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(consensus_summary, <span class="at">file=</span><span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/Huukiresiduals/"</span>, <span class="st">"consensus_summary.rdata"</span>))</span>
+<span id="cb34-22"><a href="#cb34-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-23"><a href="#cb34-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter for Significance</span></span>
+<span id="cb34-24"><a href="#cb34-24" aria-hidden="true" tabindex="-1"></a><span class="co"># A Z-score &gt; 1.96 or &lt; -1.96 roughly corresponds to p &lt; 0.05</span></span>
+<span id="cb34-25"><a href="#cb34-25" aria-hidden="true" tabindex="-1"></a><span class="co">#conconsensus_summary[, final_pval := 2 * pnorm(abs(consensus_z), lower.tail = FALSE)]</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/Huukiresiduals/"</span>, <span class="st">"consensus_summary.rdata"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Visualizing consensus data</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggside</span>(consensus_summary, <span class="at">mapping =</span> <span class="fu">aes</span>(<span class="at">x =</span> (consensus_z))) <span class="sc">+</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">bins =</span> <span class="dv">100</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div id="fig-dir_histogram" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-dir_histogram-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="HuukiResiduals_files/figure-html/fig-dir_histogram-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-dir_histogram-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4: Histogram of directionality Z scores. Consensus score represents the direction of gene correlations across cell states,
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggside</span>(consensus_summary[consensus_summary<span class="sc">$</span>ligand <span class="sc">%in%</span> ligand_genes[<span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>)]], <span class="at">mapping =</span> <span class="fu">aes</span>(<span class="at">x =</span> consensus_z, <span class="at">y =</span> consistency, <span class="at">color =</span> n_states)) <span class="sc">+</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"z-Score"</span>, <span class="at">y =</span> <span class="st">"Consistency"</span>) <span class="sc">+</span> </span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anno_top</span>(<span class="at">size =</span> <span class="fl">0.3</span>) <span class="sc">+</span></span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggalign</span>() <span class="sc">+</span></span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_density</span>(<span class="fu">aes</span>(consensus_z, <span class="at">y =</span> <span class="fu">after_stat</span>(density)), <span class="at">position =</span> <span class="st">"stack"</span>) <span class="sc">+</span></span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anno_right</span>(<span class="at">size =</span> <span class="fl">0.3</span>) <span class="sc">+</span></span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggalign</span>() <span class="sc">+</span></span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_density</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">after_stat</span>(density), <span class="at">y =</span> consistency), <span class="at">position =</span> <span class="st">"stack"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div id="fig-dir_vs_consisntency" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-dir_vs_consisntency-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="HuukiResiduals_files/figure-html/fig-dir_vs_consisntency-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-dir_vs_consisntency-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5: Directionality z scores vs, consistency. Consistency represents what percentage of cell states showed a consistent directionality.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Aggregating consensus scores into a directionality matrix</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>directionality_dt <span class="ot">&lt;-</span> <span class="fu">dcast</span>(</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>  consensus_summary, </span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>  ligand <span class="sc">~</span> target, </span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">value.var =</span> <span class="st">"consensus_z"</span>,</span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">fill =</span> <span class="cn">NA</span> </span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a>directionality_mtx <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(directionality_dt[, <span class="sc">-</span><span class="dv">1</span>])</span>
+<span id="cb38-9"><a href="#cb38-9" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(directionality_mtx) <span class="ot">&lt;-</span> directionality_dt<span class="sc">$</span>ligand</span>
+<span id="cb38-10"><a href="#cb38-10" aria-hidden="true" tabindex="-1"></a>directionality_mtx <span class="ot">&lt;-</span> directionality_mtx[ligand_genes, target_genes]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Getting a sign matrix</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>sign_mtx <span class="ot">&lt;-</span> <span class="fu">sign</span>(directionality_mtx)</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>sign_mtx[<span class="fu">which</span>(<span class="fu">is.na</span>(sign_mtx))] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>sign_mtx[<span class="fu">which</span>(sign_mtx <span class="sc">==</span> <span class="dv">0</span>)] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>W_matrix <span class="ot">&lt;-</span> <span class="fu">t</span>(ligand_target_matrix[target_genes, ligand_genes])</span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>signed_W_mtx <span class="ot">&lt;-</span> sign_mtx <span class="sc">*</span> W_matrix <span class="co"># Provide this instead of ligand_target_matrix in build_Omega()</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Modifying W matrix with consensus scores</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>base_dir <span class="ot">&lt;-</span> <span class="fu">quantile</span>(<span class="fu">abs</span>(directionality_mtx), <span class="fl">0.95</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>norm_dir_mtx <span class="ot">&lt;-</span> directionality_mtx<span class="sc">/</span>base_dir</span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>norm_dir_mtx[<span class="fu">which</span>(<span class="fu">is.na</span>(norm_dir_mtx))] <span class="ot">&lt;-</span> <span class="fu">mean</span>(norm_dir_mtx, <span class="at">na.rm=</span><span class="cn">TRUE</span>)</span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>cor_W_mtx <span class="ot">&lt;-</span> norm_dir_mtx <span class="sc">*</span> W_matrix</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="omega-tensor" class="level2">
-<h2 class="anchored" data-anchor-id="omega-tensor">5.2 Omega tensor</h2>
+<h2 class="anchored" data-anchor-id="omega-tensor">5.3 Omega tensor</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>Omega <span class="ot">&lt;-</span> <span class="fu">build_Omega</span>(avg_state_expr, ligand_target_matrix, lr_network, <span class="at">mask_threshold =</span> <span class="fl">0.5</span>, <span class="at">masking_type =</span> <span class="st">"soft"</span>)</span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>niche_strength <span class="ot">&lt;-</span> <span class="fu">apply</span>(Omega, <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>), sum)</span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>gene_pressure <span class="ot">&lt;-</span> <span class="fu">apply</span>(Omega, <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">3</span>), sum)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>Omega <span class="ot">&lt;-</span> <span class="fu">build_Omega</span>(avg_state_expr, <span class="fu">t</span>(cor_W_mtx), lr_network, <span class="at">mask_threshold =</span> <span class="fl">0.1</span>, <span class="at">masking_type =</span> <span class="st">"soft"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>niche_strength <span class="ot">&lt;-</span> <span class="fu">apply</span>(Omega, <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>), sum)</span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>gene_pressure <span class="ot">&lt;-</span> <span class="fu">apply</span>(Omega, <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">3</span>), sum)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Visualization</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggheatmap</span>(niche_strength) <span class="sc">+</span> </span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layout_title</span>(<span class="st">"Global Niche Interaction Strength"</span>) <span class="sc">+</span></span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Receiver"</span>, <span class="at">y =</span> <span class="st">"Sender"</span>) <span class="sc">+</span> </span>
-<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">45</span>, <span class="at">vjust =</span> <span class="dv">1</span>, <span class="at">hjust =</span> <span class="dv">1</span>)) <span class="sc">+</span></span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anno_right</span>(<span class="at">size =</span> <span class="fl">0.2</span>) <span class="sc">+</span></span>
-<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">align_dendro</span>()<span class="sc">+</span></span>
-<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">90</span>, <span class="at">vjust =</span> <span class="dv">1</span>, <span class="at">hjust =</span> <span class="dv">1</span>)) <span class="sc">+</span></span>
-<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anno_top</span>(<span class="at">size =</span> <span class="fl">0.3</span>) <span class="sc">+</span></span>
-<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">align_dendro</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggheatmap</span>(niche_strength) <span class="sc">+</span> </span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layout_title</span>(<span class="st">"Global Niche Interaction Strength"</span>) <span class="sc">+</span></span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Receiver"</span>, <span class="at">y =</span> <span class="st">"Sender"</span>) <span class="sc">+</span> </span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">45</span>, <span class="at">vjust =</span> <span class="dv">1</span>, <span class="at">hjust =</span> <span class="dv">1</span>)) <span class="sc">+</span></span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anno_right</span>(<span class="at">size =</span> <span class="fl">0.2</span>) <span class="sc">+</span></span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">align_dendro</span>()<span class="sc">+</span></span>
+<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">90</span>, <span class="at">vjust =</span> <span class="dv">1</span>, <span class="at">hjust =</span> <span class="dv">1</span>)) <span class="sc">+</span></span>
+<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anno_top</span>(<span class="at">size =</span> <span class="fl">0.3</span>) <span class="sc">+</span></span>
+<span id="cb43-9"><a href="#cb43-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">align_dendro</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>→ heatmap built with `geom_tile()`</code></pre>
 </div>
@@ -372,7 +626,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <img src="HuukiResiduals_files/figure-html/fig-niche_strength-1.png" class="img-fluid figure-img" width="672">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-niche_strength-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;1: Heatmap of interaction strength across cell states.
+Figure&nbsp;6: Heatmap of interaction strength across cell states.
 </figcaption>
 </figure>
 </div>
@@ -380,29 +634,29 @@ Figure&nbsp;1: Heatmap of interaction strength across cell states.
 </div>
 </section>
 <section id="weighted-omega-tensor" class="level2">
-<h2 class="anchored" data-anchor-id="weighted-omega-tensor">5.3 Weighted Omega Tensor</h2>
+<h2 class="anchored" data-anchor-id="weighted-omega-tensor">5.4 Weighted Omega Tensor</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>avg_props <span class="ot">&lt;-</span> <span class="fu">table</span>(sce<span class="sc">$</span>cellType_hc) <span class="sc">/</span> <span class="fu">ncol</span>(sce)</span>
-<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>Weighted_Omega <span class="ot">&lt;-</span> Omega</span>
-<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(k <span class="cf">in</span> cell_states){</span>
-<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>  Weighted_Omega[k, , ] <span class="ot">&lt;-</span> Weighted_Omega[k, , ] <span class="sc">*</span> avg_props[k]</span>
-<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>niche_strength_weighted <span class="ot">&lt;-</span> <span class="fu">apply</span>(Weighted_Omega, <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>), sum)</span>
-<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a>weighted_gene_pressure <span class="ot">&lt;-</span> <span class="fu">apply</span>(Weighted_Omega, <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">3</span>), sum)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>avg_props <span class="ot">&lt;-</span> <span class="fu">table</span>(sce<span class="sc">$</span>cellType_hc) <span class="sc">/</span> <span class="fu">ncol</span>(sce)</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>Weighted_Omega <span class="ot">&lt;-</span> Omega</span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(k <span class="cf">in</span> cell_states){</span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>  Weighted_Omega[k, , ] <span class="ot">&lt;-</span> Weighted_Omega[k, , ] <span class="sc">*</span> avg_props[k]</span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a>niche_strength_weighted <span class="ot">&lt;-</span> <span class="fu">apply</span>(Weighted_Omega, <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>), sum)</span>
+<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>weighted_gene_pressure <span class="ot">&lt;-</span> <span class="fu">apply</span>(Weighted_Omega, <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">3</span>), sum)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Visualization</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggheatmap</span>(niche_strength_weighted) <span class="sc">+</span> </span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layout_title</span>(<span class="st">"Effective Niche Pressure"</span>) <span class="sc">+</span></span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Receiver"</span>, <span class="at">y =</span> <span class="st">"Sender"</span>) <span class="sc">+</span> </span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">45</span>, <span class="at">vjust =</span> <span class="dv">1</span>, <span class="at">hjust =</span> <span class="dv">1</span>)) <span class="sc">+</span></span>
-<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anno_right</span>(<span class="at">size =</span> <span class="fl">0.2</span>) <span class="sc">+</span></span>
-<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">align_dendro</span>() <span class="sc">+</span></span>
-<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">90</span>, <span class="at">vjust =</span> <span class="dv">1</span>, <span class="at">hjust =</span> <span class="dv">1</span>)) <span class="sc">+</span></span>
-<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anno_top</span>(<span class="at">size =</span> <span class="fl">0.3</span>) <span class="sc">+</span></span>
-<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">align_dendro</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggheatmap</span>(niche_strength_weighted) <span class="sc">+</span> </span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layout_title</span>(<span class="st">"Effective Niche Pressure"</span>) <span class="sc">+</span></span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Receiver"</span>, <span class="at">y =</span> <span class="st">"Sender"</span>) <span class="sc">+</span> </span>
+<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">45</span>, <span class="at">vjust =</span> <span class="dv">1</span>, <span class="at">hjust =</span> <span class="dv">1</span>)) <span class="sc">+</span></span>
+<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anno_right</span>(<span class="at">size =</span> <span class="fl">0.2</span>) <span class="sc">+</span></span>
+<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">align_dendro</span>() <span class="sc">+</span></span>
+<span id="cb46-7"><a href="#cb46-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">90</span>, <span class="at">vjust =</span> <span class="dv">1</span>, <span class="at">hjust =</span> <span class="dv">1</span>)) <span class="sc">+</span></span>
+<span id="cb46-8"><a href="#cb46-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anno_top</span>(<span class="at">size =</span> <span class="fl">0.3</span>) <span class="sc">+</span></span>
+<span id="cb46-9"><a href="#cb46-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">align_dendro</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>→ heatmap built with `geom_tile()`</code></pre>
 </div>
@@ -413,7 +667,7 @@ Figure&nbsp;1: Heatmap of interaction strength across cell states.
 <img src="HuukiResiduals_files/figure-html/fig-weighted_niche_strength-1.png" class="img-fluid figure-img" width="672">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-weighted_niche_strength-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;2: Heatmap of weighted interaction strength across cell states.
+Figure&nbsp;7: Heatmap of weighted interaction strength across cell states.
 </figcaption>
 </figure>
 </div>
@@ -425,53 +679,74 @@ Figure&nbsp;2: Heatmap of weighted interaction strength across cell states.
 <h1>6. Checking gene pressure effect on BayesPrism residuals</h1>
 <p>Making a dataframe containing residual and gene pressure data for all states</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>results_list <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>common_genes <span class="ot">&lt;-</span> <span class="fu">intersect</span>(<span class="fu">colnames</span>(gene_pressure), <span class="fu">colnames</span>(residual_mtx))</span>
-<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(type <span class="cf">in</span> <span class="fu">names</span>(bp_res<span class="sc">@</span>prism<span class="sc">@</span>map)){</span>
-<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (state <span class="cf">in</span> bp_res<span class="sc">@</span>prism<span class="sc">@</span>map[[type]]){</span>
-<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Check if state exists in the matrix and has non-NA data</span></span>
-<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (state <span class="sc">%in%</span> <span class="fu">rownames</span>(residual_mtx) <span class="sc">&amp;&amp;</span> <span class="fu">sum</span>(<span class="sc">!</span><span class="fu">is.na</span>(residual_mtx[state, ])) <span class="sc">!=</span> <span class="dv">0</span>) {</span>
-<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Filter to expressed genes per cell type</span></span>
-<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>      expressed_genes <span class="ot">&lt;-</span> <span class="fu">intersect</span>(common_genes, <span class="fu">colnames</span>(true_cpm_mtx)[true_cpm_mtx[state, ] <span class="sc">&gt;=</span> <span class="fu">quantile</span>(true_cpm_mtx[state,], <span class="fl">0.1</span>)])</span>
-<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>      </span>
-<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a>      tmp <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">type =</span> type,</span>
-<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a>        <span class="at">state =</span> state,</span>
-<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a>        <span class="at">gene =</span> expressed_genes,</span>
-<span id="cb32-16"><a href="#cb32-16" aria-hidden="true" tabindex="-1"></a>        <span class="at">gene_pressure =</span> <span class="fu">as.numeric</span>(gene_pressure[state, expressed_genes]),</span>
-<span id="cb32-17"><a href="#cb32-17" aria-hidden="true" tabindex="-1"></a>        <span class="at">weighted_gene_pressure =</span> <span class="fu">as.numeric</span>(weighted_gene_pressure[state, expressed_genes]),</span>
-<span id="cb32-18"><a href="#cb32-18" aria-hidden="true" tabindex="-1"></a>        <span class="at">residual =</span> <span class="fu">as.numeric</span>(residual_mtx[state, expressed_genes]),</span>
-<span id="cb32-19"><a href="#cb32-19" aria-hidden="true" tabindex="-1"></a>        <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span></span>
-<span id="cb32-20"><a href="#cb32-20" aria-hidden="true" tabindex="-1"></a>      )</span>
-<span id="cb32-21"><a href="#cb32-21" aria-hidden="true" tabindex="-1"></a>      </span>
-<span id="cb32-22"><a href="#cb32-22" aria-hidden="true" tabindex="-1"></a>      results_list[[<span class="fu">length</span>(results_list) <span class="sc">+</span> <span class="dv">1</span>]] <span class="ot">&lt;-</span> tmp</span>
-<span id="cb32-23"><a href="#cb32-23" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb32-24"><a href="#cb32-24" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb32-25"><a href="#cb32-25" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb32-26"><a href="#cb32-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb32-27"><a href="#cb32-27" aria-hidden="true" tabindex="-1"></a>aggregated_df <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, results_list)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>results_list <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>common_genes <span class="ot">&lt;-</span> <span class="fu">intersect</span>(<span class="fu">colnames</span>(gene_pressure), <span class="fu">colnames</span>(residual_mtx))</span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(type <span class="cf">in</span> <span class="fu">names</span>(bp_res<span class="sc">@</span>prism<span class="sc">@</span>map)){</span>
+<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (state <span class="cf">in</span> bp_res<span class="sc">@</span>prism<span class="sc">@</span>map[[type]]){</span>
+<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Check if state exists in the matrix and has non-NA data</span></span>
+<span id="cb48-8"><a href="#cb48-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (state <span class="sc">%in%</span> <span class="fu">rownames</span>(residual_mtx) <span class="sc">&amp;&amp;</span> <span class="fu">sum</span>(<span class="sc">!</span><span class="fu">is.na</span>(residual_mtx[state, ])) <span class="sc">!=</span> <span class="dv">0</span>) {</span>
+<span id="cb48-9"><a href="#cb48-9" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Filter to expressed genes per cell type</span></span>
+<span id="cb48-10"><a href="#cb48-10" aria-hidden="true" tabindex="-1"></a>      expressed_genes <span class="ot">&lt;-</span> <span class="fu">intersect</span>(common_genes, <span class="fu">colnames</span>(true_cpm_mtx)[true_cpm_mtx[state, ] <span class="sc">&gt;=</span> <span class="fu">quantile</span>(true_cpm_mtx[state,], <span class="fl">0.1</span>)])</span>
+<span id="cb48-11"><a href="#cb48-11" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb48-12"><a href="#cb48-12" aria-hidden="true" tabindex="-1"></a>      tmp <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb48-13"><a href="#cb48-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">type =</span> type,</span>
+<span id="cb48-14"><a href="#cb48-14" aria-hidden="true" tabindex="-1"></a>        <span class="at">state =</span> state,</span>
+<span id="cb48-15"><a href="#cb48-15" aria-hidden="true" tabindex="-1"></a>        <span class="at">gene =</span> expressed_genes,</span>
+<span id="cb48-16"><a href="#cb48-16" aria-hidden="true" tabindex="-1"></a>        <span class="at">gene_pressure =</span> <span class="fu">as.numeric</span>(gene_pressure[state, expressed_genes]),</span>
+<span id="cb48-17"><a href="#cb48-17" aria-hidden="true" tabindex="-1"></a>        <span class="at">weighted_gene_pressure =</span> <span class="fu">as.numeric</span>(weighted_gene_pressure[state, expressed_genes]),</span>
+<span id="cb48-18"><a href="#cb48-18" aria-hidden="true" tabindex="-1"></a>        <span class="at">residual =</span> <span class="fu">as.numeric</span>(residual_mtx[state, expressed_genes]),</span>
+<span id="cb48-19"><a href="#cb48-19" aria-hidden="true" tabindex="-1"></a>        <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span></span>
+<span id="cb48-20"><a href="#cb48-20" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb48-21"><a href="#cb48-21" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb48-22"><a href="#cb48-22" aria-hidden="true" tabindex="-1"></a>      results_list[[<span class="fu">length</span>(results_list) <span class="sc">+</span> <span class="dv">1</span>]] <span class="ot">&lt;-</span> tmp</span>
+<span id="cb48-23"><a href="#cb48-23" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb48-24"><a href="#cb48-24" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb48-25"><a href="#cb48-25" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb48-26"><a href="#cb48-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-27"><a href="#cb48-27" aria-hidden="true" tabindex="-1"></a>aggregated_df <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, results_list)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Making a dataframe for plotting</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>types_to_plot <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Astro"</span>, </span>
-<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">"EndoMural"</span>, </span>
-<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Micro"</span>, </span>
-<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Oligo"</span>, </span>
-<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">"OPC"</span>, </span>
-<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Inhib"</span>,</span>
-<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Excit"</span></span>
-<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a><span class="co">#types_to_plot &lt;- c("Micro")</span></span>
-<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a><span class="co">#states_to_plot &lt;- c("Excit_09", "Excit_05", "Excit_10")</span></span>
-<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb33-13"><a href="#cb33-13" aria-hidden="true" tabindex="-1"></a>plot_df <span class="ot">&lt;-</span> aggregated_df[aggregated_df<span class="sc">$</span>type <span class="sc">%in%</span> types_to_plot <span class="co">#&amp; aggregated_df$gene_pressure &lt; 4</span></span>
-<span id="cb33-14"><a href="#cb33-14" aria-hidden="true" tabindex="-1"></a>                         , ]</span>
-<span id="cb33-15"><a href="#cb33-15" aria-hidden="true" tabindex="-1"></a>plot_df<span class="sc">$</span>residual <span class="ot">&lt;-</span> <span class="fu">abs</span>(plot_df<span class="sc">$</span>residual)</span>
-<span id="cb33-16"><a href="#cb33-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb33-17"><a href="#cb33-17" aria-hidden="true" tabindex="-1"></a><span class="fu">cor.test</span>((plot_df<span class="sc">$</span>residual), plot_df<span class="sc">$</span>gene_pressure, <span class="at">method=</span><span class="st">"spearman"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>types_to_plot <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Astro"</span>, </span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">"EndoMural"</span>, </span>
+<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Micro"</span>, </span>
+<span id="cb49-5"><a href="#cb49-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Oligo"</span>, </span>
+<span id="cb49-6"><a href="#cb49-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">"OPC"</span>, </span>
+<span id="cb49-7"><a href="#cb49-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Inhib"</span>,</span>
+<span id="cb49-8"><a href="#cb49-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Excit"</span></span>
+<span id="cb49-9"><a href="#cb49-9" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb49-10"><a href="#cb49-10" aria-hidden="true" tabindex="-1"></a><span class="co">#types_to_plot &lt;- c("OPC")</span></span>
+<span id="cb49-11"><a href="#cb49-11" aria-hidden="true" tabindex="-1"></a><span class="co">#states_to_plot &lt;- c("Excit_09", "Excit_05", "Excit_10")</span></span>
+<span id="cb49-12"><a href="#cb49-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb49-13"><a href="#cb49-13" aria-hidden="true" tabindex="-1"></a>plot_df <span class="ot">&lt;-</span> aggregated_df[aggregated_df<span class="sc">$</span>type <span class="sc">%in%</span> types_to_plot </span>
+<span id="cb49-14"><a href="#cb49-14" aria-hidden="true" tabindex="-1"></a>                         <span class="co">#&amp; aggregated_df$residual != 0</span></span>
+<span id="cb49-15"><a href="#cb49-15" aria-hidden="true" tabindex="-1"></a>                         , ]</span>
+<span id="cb49-16"><a href="#cb49-16" aria-hidden="true" tabindex="-1"></a><span class="co">#plot_df$residual &lt;- abs(plot_df$residual)</span></span>
+<span id="cb49-17"><a href="#cb49-17" aria-hidden="true" tabindex="-1"></a><span class="co">#plot_df$gene_pressure &lt;- abs(plot_df$gene_pressure)</span></span>
+<span id="cb49-18"><a href="#cb49-18" aria-hidden="true" tabindex="-1"></a><span class="co">#plot_df$weighted_gene_pressure &lt;- abs(plot_df$weighted_gene_pressure)</span></span>
+<span id="cb49-19"><a href="#cb49-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb49-20"><a href="#cb49-20" aria-hidden="true" tabindex="-1"></a>plot_df <span class="ot">&lt;-</span> plot_df[(plot_df<span class="sc">$</span>gene_pressure) <span class="sc">&lt;</span> <span class="fu">quantile</span>(plot_df<span class="sc">$</span>gene_pressure, <span class="fl">0.975</span>)</span>
+<span id="cb49-21"><a href="#cb49-21" aria-hidden="true" tabindex="-1"></a>                   <span class="sc">&amp;</span> (plot_df<span class="sc">$</span>gene_pressure) <span class="sc">&gt;</span> <span class="fu">quantile</span>(plot_df<span class="sc">$</span>gene_pressure, <span class="fl">0.025</span>)</span>
+<span id="cb49-22"><a href="#cb49-22" aria-hidden="true" tabindex="-1"></a>                   <span class="sc">&amp;</span> plot_df<span class="sc">$</span>residual <span class="sc">&lt;</span> <span class="fu">quantile</span>(plot_df<span class="sc">$</span>residual, <span class="fl">0.975</span>)</span>
+<span id="cb49-23"><a href="#cb49-23" aria-hidden="true" tabindex="-1"></a>                   <span class="sc">&amp;</span> plot_df<span class="sc">$</span>residual <span class="sc">&gt;</span> <span class="fu">quantile</span>(plot_df<span class="sc">$</span>residual, <span class="fl">0.025</span>)</span>
+<span id="cb49-24"><a href="#cb49-24" aria-hidden="true" tabindex="-1"></a>                   , ]</span>
+<span id="cb49-25"><a href="#cb49-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb49-26"><a href="#cb49-26" aria-hidden="true" tabindex="-1"></a><span class="co"># test</span></span>
+<span id="cb49-27"><a href="#cb49-27" aria-hidden="true" tabindex="-1"></a>plot_df<span class="sc">$</span>test <span class="ot">&lt;-</span> <span class="fu">sample</span>(plot_df<span class="sc">$</span>gene_pressure)</span>
+<span id="cb49-28"><a href="#cb49-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb49-29"><a href="#cb49-29" aria-hidden="true" tabindex="-1"></a><span class="co"># DIRECTIONALITY</span></span>
+<span id="cb49-30"><a href="#cb49-30" aria-hidden="true" tabindex="-1"></a><span class="co">#plot_df$residual &lt;- (plot_df$residual)</span></span>
+<span id="cb49-31"><a href="#cb49-31" aria-hidden="true" tabindex="-1"></a><span class="co">#plot_df$gene_pressure &lt;- (plot_df$gene_pressure)</span></span>
+<span id="cb49-32"><a href="#cb49-32" aria-hidden="true" tabindex="-1"></a><span class="co">#plot_df$weighted_gene_pressure &lt;- (plot_df$weighted_gene_pressure)</span></span>
+<span id="cb49-33"><a href="#cb49-33" aria-hidden="true" tabindex="-1"></a><span class="co">#directional_mask &lt;- plot_df$residual/abs(plot_df$residual)</span></span>
+<span id="cb49-34"><a href="#cb49-34" aria-hidden="true" tabindex="-1"></a><span class="co">#plot_df$gene_pressure &lt;- plot_df$gene_pressure * directional_mask</span></span>
+<span id="cb49-35"><a href="#cb49-35" aria-hidden="true" tabindex="-1"></a><span class="co">#plot_df$weighted_gene_pressure &lt;- plot_df$weighted_gene_pressure * directional_mask</span></span>
+<span id="cb49-36"><a href="#cb49-36" aria-hidden="true" tabindex="-1"></a><span class="co">#lot_df$test &lt;- plot_df$test * directional_mask</span></span>
+<span id="cb49-37"><a href="#cb49-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb49-38"><a href="#cb49-38" aria-hidden="true" tabindex="-1"></a><span class="fu">cor.test</span>((plot_df<span class="sc">$</span>residual), plot_df<span class="sc">$</span>gene_pressure, <span class="at">method=</span><span class="st">"spearman"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning in cor.test.default((plot_df$residual), plot_df$gene_pressure, method =
 "spearman"): Cannot compute exact p-value with ties</code></pre>
@@ -481,52 +756,69 @@ Figure&nbsp;2: Heatmap of weighted interaction strength across cell states.
     Spearman's rank correlation rho
 
 data:  (plot_df$residual) and plot_df$gene_pressure
-S = 5.8562e+15, p-value &lt; 2.2e-16
+S = 3.1786e+15, p-value &lt; 2.2e-16
 alternative hypothesis: true rho is not equal to 0
 sample estimates:
       rho 
-0.1113992 </code></pre>
+0.3557207 </code></pre>
 </div>
 </div>
-<p>Gene pressre plots</p>
+<p>Gene pressure plots</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggside</span>(plot_df, <span class="at">mapping =</span> <span class="fu">aes</span>(gene_pressure, (residual), <span class="at">colour =</span> type)) <span class="sc">-</span></span>
-<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scheme_theme</span>(<span class="fu">theme_bw</span>()) <span class="sc">+</span></span>
-<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layout_theme</span>(<span class="at">panel.border =</span> <span class="fu">element_blank</span>()) <span class="sc">+</span></span>
-<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.5</span>, <span class="at">size =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
-<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">color =</span> <span class="st">"darkgray"</span>) <span class="sc">+</span></span>
-<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Gene Pressure"</span>, <span class="at">y =</span> <span class="st">"AbsError"</span>) <span class="sc">+</span></span>
-<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Bar plot</span></span>
-<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anno_top</span>(<span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
-<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggalign</span>() <span class="sc">+</span></span>
-<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_summary_bin</span>(</span>
-<span id="cb36-11"><a href="#cb36-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">mapping =</span> <span class="fu">aes</span>(<span class="at">x =</span> gene_pressure, <span class="at">y =</span> (residual), <span class="at">fill =</span> <span class="fu">after_stat</span>(count)),</span>
-<span id="cb36-12"><a href="#cb36-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">bins =</span> <span class="dv">50</span>,</span>
-<span id="cb36-13"><a href="#cb36-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">geom =</span> <span class="st">"bar"</span>,</span>
-<span id="cb36-14"><a href="#cb36-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">fun.data =</span> <span class="cf">function</span>(x) {</span>
-<span id="cb36-15"><a href="#cb36-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">data.frame</span>(</span>
-<span id="cb36-16"><a href="#cb36-16" aria-hidden="true" tabindex="-1"></a>        <span class="at">y =</span> <span class="fu">mean</span>(x),</span>
-<span id="cb36-17"><a href="#cb36-17" aria-hidden="true" tabindex="-1"></a>        <span class="at">count =</span> <span class="fu">length</span>(x)</span>
-<span id="cb36-18"><a href="#cb36-18" aria-hidden="true" tabindex="-1"></a>      )</span>
-<span id="cb36-19"><a href="#cb36-19" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb36-20"><a href="#cb36-20" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb36-21"><a href="#cb36-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_gradient</span>(<span class="at">low =</span> <span class="st">"lightgrey"</span>, <span class="at">high =</span> <span class="st">"#08306b"</span>, <span class="at">name =</span> <span class="st">"Gene Count"</span>) <span class="sc">+</span></span>
-<span id="cb36-22"><a href="#cb36-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="fu">paste</span>(<span class="st">"Effect of Gene Pressure on BayesPrism Error"</span>), </span>
-<span id="cb36-23"><a href="#cb36-23" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Mean AbsError"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggside</span>(plot_df, <span class="at">mapping =</span> <span class="fu">aes</span>(gene_pressure, (residual), <span class="at">colour =</span> type)) <span class="sc">-</span></span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scheme_theme</span>(<span class="fu">theme_bw</span>()) <span class="sc">+</span></span>
+<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layout_theme</span>(<span class="at">panel.border =</span> <span class="fu">element_blank</span>()) <span class="sc">+</span></span>
+<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="fl">0.1</span>) <span class="sc">+</span></span>
+<span id="cb52-5"><a href="#cb52-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> type_colors) <span class="sc">+</span></span>
+<span id="cb52-6"><a href="#cb52-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">color =</span> <span class="st">"darkgray"</span>) <span class="sc">+</span></span>
+<span id="cb52-7"><a href="#cb52-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">y =</span> <span class="st">"Error"</span>) <span class="sc">+</span> </span>
+<span id="cb52-8"><a href="#cb52-8" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Density plot</span></span>
+<span id="cb52-9"><a href="#cb52-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anno_bottom</span>(<span class="at">size =</span> <span class="fl">0.3</span>) <span class="sc">+</span></span>
+<span id="cb52-10"><a href="#cb52-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggalign</span>() <span class="sc">+</span></span>
+<span id="cb52-11"><a href="#cb52-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_density</span>(<span class="fu">aes</span>(<span class="at">x =</span> gene_pressure, <span class="at">y =</span> <span class="fu">after_stat</span>(density), <span class="at">colour =</span> type), <span class="at">position =</span> <span class="st">"stack"</span>) <span class="sc">+</span></span>
+<span id="cb52-12"><a href="#cb52-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> type_colors) <span class="sc">+</span></span>
+<span id="cb52-13"><a href="#cb52-13" aria-hidden="true" tabindex="-1"></a>  <span class="co">#labs(title = paste("Effect of Gene Pressure on BayesPrism Error"))+</span></span>
+<span id="cb52-14"><a href="#cb52-14" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Density plot</span></span>
+<span id="cb52-15"><a href="#cb52-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anno_right</span>(<span class="at">size =</span> <span class="fl">0.1</span>) <span class="sc">+</span></span>
+<span id="cb52-16"><a href="#cb52-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggalign</span>() <span class="sc">+</span></span>
+<span id="cb52-17"><a href="#cb52-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_density</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">after_stat</span>(density), <span class="at">y =</span> residual, <span class="at">colour =</span> type), <span class="at">position =</span> <span class="st">"stack"</span>) <span class="sc">+</span></span>
+<span id="cb52-18"><a href="#cb52-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> type_colors) <span class="sc">+</span></span>
+<span id="cb52-19"><a href="#cb52-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="sc">-</span><span class="dv">90</span>, <span class="at">vjust =</span> <span class="fl">0.5</span>, <span class="at">hjust =</span> <span class="dv">0</span>)) <span class="sc">+</span></span>
+<span id="cb52-20"><a href="#cb52-20" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Bar plot</span></span>
+<span id="cb52-21"><a href="#cb52-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anno_top</span>(<span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb52-22"><a href="#cb52-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggalign</span>() <span class="sc">+</span></span>
+<span id="cb52-23"><a href="#cb52-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_summary_bin</span>(</span>
+<span id="cb52-24"><a href="#cb52-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">mapping =</span> <span class="fu">aes</span>(<span class="at">x =</span> gene_pressure, <span class="at">y =</span> (residual), <span class="at">fill =</span> <span class="fu">after_stat</span>(count)),</span>
+<span id="cb52-25"><a href="#cb52-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">bins =</span> <span class="dv">30</span>,</span>
+<span id="cb52-26"><a href="#cb52-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">geom =</span> <span class="st">"bar"</span>,</span>
+<span id="cb52-27"><a href="#cb52-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">fun.data =</span> <span class="cf">function</span>(x) {</span>
+<span id="cb52-28"><a href="#cb52-28" aria-hidden="true" tabindex="-1"></a>      <span class="fu">data.frame</span>(</span>
+<span id="cb52-29"><a href="#cb52-29" aria-hidden="true" tabindex="-1"></a>        <span class="at">y =</span> <span class="fu">mean</span>(x),</span>
+<span id="cb52-30"><a href="#cb52-30" aria-hidden="true" tabindex="-1"></a>        <span class="at">count =</span> <span class="fu">length</span>(x)</span>
+<span id="cb52-31"><a href="#cb52-31" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb52-32"><a href="#cb52-32" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb52-33"><a href="#cb52-33" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb52-34"><a href="#cb52-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_gradient</span>(<span class="at">low =</span> <span class="st">"lightgrey"</span>, <span class="at">high =</span> <span class="st">"#08306b"</span>, <span class="at">name =</span> <span class="st">"Gene Count"</span>) <span class="sc">+</span></span>
+<span id="cb52-35"><a href="#cb52-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Gene Pressure"</span>, <span class="at">y =</span> <span class="st">"Mean Error"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>`geom_smooth()` using formula = 'y ~ x'</code></pre>
 </div>
 <div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="HuukiResiduals_files/figure-html/unnamed-chunk-27-1.png" class="img-fluid figure-img" width="672"></p>
+<div id="fig-gene_pressure" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-gene_pressure-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="HuukiResiduals_files/figure-html/fig-gene_pressure-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-gene_pressure-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;8: Effect of cell-state-specific gene pressure on residuals between the BayesPrism-generated gene expressions and the observed snRNA-seq expression in sample Br2720_post. The top plot top shows the mean errors binned by gene pressure score ranges. Notably, a positive trend can be observed, which is supported by the spearman correlation rho = 0.355720685833012. The bottom plot shows the scatter plot for gene pressure vs.&nbsp;error.
+</figcaption>
 </figure>
 </div>
 </div>
 </div>
 <p>Weighted gene pressure plots</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cor.test</span>((plot_df<span class="sc">$</span>residual), plot_df<span class="sc">$</span>weighted_gene_pressure, <span class="at">method=</span><span class="st">"spearman"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cor.test</span>((plot_df<span class="sc">$</span>residual), plot_df<span class="sc">$</span>weighted_gene_pressure, <span class="at">method=</span><span class="st">"spearman"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning in cor.test.default((plot_df$residual), plot_df$weighted_gene_pressure,
 : Cannot compute exact p-value with ties</code></pre>
@@ -536,42 +828,48 @@ sample estimates:
     Spearman's rank correlation rho
 
 data:  (plot_df$residual) and plot_df$weighted_gene_pressure
-S = 5.8813e+15, p-value &lt; 2.2e-16
+S = 3.2027e+15, p-value &lt; 2.2e-16
 alternative hypothesis: true rho is not equal to 0
 sample estimates:
       rho 
-0.1075944 </code></pre>
+0.3508351 </code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggside</span>(plot_df, <span class="at">mapping =</span> <span class="fu">aes</span>(weighted_gene_pressure, (residual), <span class="at">colour =</span> type)) <span class="sc">-</span></span>
-<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scheme_theme</span>(<span class="fu">theme_bw</span>()) <span class="sc">+</span></span>
-<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layout_theme</span>(<span class="at">panel.border =</span> <span class="fu">element_blank</span>()) <span class="sc">+</span></span>
-<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.5</span>, <span class="at">size =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
-<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">color =</span> <span class="st">"darkgray"</span>) <span class="sc">+</span></span>
-<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Weighted Gene Pressure"</span>, <span class="at">y =</span> <span class="st">"AbsError"</span>) <span class="sc">+</span></span>
-<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Bar plot</span></span>
-<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anno_top</span>(<span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
-<span id="cb41-9"><a href="#cb41-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggalign</span>() <span class="sc">+</span></span>
-<span id="cb41-10"><a href="#cb41-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_summary_bin</span>(</span>
-<span id="cb41-11"><a href="#cb41-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">mapping =</span> <span class="fu">aes</span>(<span class="at">x =</span> weighted_gene_pressure, <span class="at">y =</span> (residual), <span class="at">fill =</span> <span class="fu">after_stat</span>(count)),</span>
-<span id="cb41-12"><a href="#cb41-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">bins =</span> <span class="dv">50</span>,</span>
-<span id="cb41-13"><a href="#cb41-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">geom =</span> <span class="st">"bar"</span>,</span>
-<span id="cb41-14"><a href="#cb41-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">fun.data =</span> <span class="cf">function</span>(x) {</span>
-<span id="cb41-15"><a href="#cb41-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">data.frame</span>(</span>
-<span id="cb41-16"><a href="#cb41-16" aria-hidden="true" tabindex="-1"></a>        <span class="at">y =</span> <span class="fu">mean</span>(x),</span>
-<span id="cb41-17"><a href="#cb41-17" aria-hidden="true" tabindex="-1"></a>        <span class="at">count =</span> <span class="fu">length</span>(x)</span>
-<span id="cb41-18"><a href="#cb41-18" aria-hidden="true" tabindex="-1"></a>      )</span>
-<span id="cb41-19"><a href="#cb41-19" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb41-20"><a href="#cb41-20" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb41-21"><a href="#cb41-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_gradient</span>(<span class="at">low =</span> <span class="st">"lightgrey"</span>, <span class="at">high =</span> <span class="st">"#08306b"</span>, <span class="at">name =</span> <span class="st">"Gene Count"</span>) <span class="sc">+</span></span>
-<span id="cb41-22"><a href="#cb41-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="fu">paste</span>(<span class="st">"Effect of Weighted Gene Pressure on BayesPrism Error"</span>), </span>
-<span id="cb41-23"><a href="#cb41-23" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Mean AbsError"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggside</span>(plot_df, <span class="at">mapping =</span> <span class="fu">aes</span>(weighted_gene_pressure, (residual), <span class="at">colour =</span> type)) <span class="sc">-</span></span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scheme_theme</span>(<span class="fu">theme_bw</span>()) <span class="sc">+</span></span>
+<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layout_theme</span>(<span class="at">panel.border =</span> <span class="fu">element_blank</span>()) <span class="sc">+</span></span>
+<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.5</span>, <span class="at">size =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
+<span id="cb57-5"><a href="#cb57-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> type_colors) <span class="sc">+</span></span>
+<span id="cb57-6"><a href="#cb57-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">color =</span> <span class="st">"darkgray"</span>) <span class="sc">+</span></span>
+<span id="cb57-7"><a href="#cb57-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Weighted Gene Pressure"</span>, <span class="at">y =</span> <span class="st">"Error"</span>) <span class="sc">+</span></span>
+<span id="cb57-8"><a href="#cb57-8" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Bar plot</span></span>
+<span id="cb57-9"><a href="#cb57-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anno_top</span>(<span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb57-10"><a href="#cb57-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggalign</span>() <span class="sc">+</span></span>
+<span id="cb57-11"><a href="#cb57-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_summary_bin</span>(</span>
+<span id="cb57-12"><a href="#cb57-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">mapping =</span> <span class="fu">aes</span>(<span class="at">x =</span> weighted_gene_pressure, <span class="at">y =</span> (residual), <span class="at">fill =</span> <span class="fu">after_stat</span>(count)),</span>
+<span id="cb57-13"><a href="#cb57-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">bins =</span> <span class="dv">30</span>,</span>
+<span id="cb57-14"><a href="#cb57-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">geom =</span> <span class="st">"bar"</span>,</span>
+<span id="cb57-15"><a href="#cb57-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">fun.data =</span> <span class="cf">function</span>(x) {</span>
+<span id="cb57-16"><a href="#cb57-16" aria-hidden="true" tabindex="-1"></a>      <span class="fu">data.frame</span>(</span>
+<span id="cb57-17"><a href="#cb57-17" aria-hidden="true" tabindex="-1"></a>        <span class="at">y =</span> <span class="fu">mean</span>(x),</span>
+<span id="cb57-18"><a href="#cb57-18" aria-hidden="true" tabindex="-1"></a>        <span class="at">count =</span> <span class="fu">length</span>(x)</span>
+<span id="cb57-19"><a href="#cb57-19" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb57-20"><a href="#cb57-20" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb57-21"><a href="#cb57-21" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb57-22"><a href="#cb57-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_gradient</span>(<span class="at">low =</span> <span class="st">"lightgrey"</span>, <span class="at">high =</span> <span class="st">"#08306b"</span>, <span class="at">name =</span> <span class="st">"Gene Count"</span>) <span class="sc">+</span></span>
+<span id="cb57-23"><a href="#cb57-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="fu">paste</span>(<span class="st">"Effect of Weighted Gene Pressure on BayesPrism Error"</span>), </span>
+<span id="cb57-24"><a href="#cb57-24" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Mean Error"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>`geom_smooth()` using formula = 'y ~ x'</code></pre>
 </div>
 <div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="HuukiResiduals_files/figure-html/unnamed-chunk-28-1.png" class="img-fluid figure-img" width="672"></p>
+<div id="fig-weighted_gene_pressure" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-weighted_gene_pressure-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="HuukiResiduals_files/figure-html/fig-weighted_gene_pressure-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-weighted_gene_pressure-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;9: Effect of weighted cell-state-specific gene pressure on residuals between the BayesPrism-generated gene expressions and the observed snRNA-seq expression in sample Br2720_post. rho = 0.350835128248996.
+</figcaption>
 </figure>
 </div>
 </div>

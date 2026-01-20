@@ -9,6 +9,7 @@ editor: visual
 Packages
 
 ```{r}
+#| label: libraries
 #| output: false
 #| warning: false
 library(BayesPrism)
@@ -17,17 +18,24 @@ library(biomaRt)
 library(ggplot2)
 library(ggalign)
 library(tidyverse)
+library(scuttle)
+library(scales)
+library(colorspace)
+library(Hmisc)
+library(data.table)
 ```
 
 Functions
 
 ```{r}
+#| label: functions
 source("../R/Omega_tensor.R")
 ```
 
 Global variables
 
 ```{r}
+#| label: global_variables
 data_dir <- "../data/"
 dir.exists(data_dir)
 ```
@@ -37,6 +45,7 @@ dir.exists(data_dir)
 Reference data
 
 ```{r}
+#| label: sce_load
 #| output: false
 #| warning: false
 if(!dir.exists(paste0(data_dir, "Data_Huuki-Myers2025_Brain/"))){
@@ -51,6 +60,7 @@ sce <- HDF5Array::loadHDF5SummarizedExperiment(file.path(paste0(data_dir, "Data_
 Matched bulk data
 
 ```{r}
+#| label: blk_load
 #| output: false
 #| warning: false
 blk <- DeconvoBuddies::fetch_deconvo_data("rse_gene")
@@ -59,6 +69,7 @@ blk <- DeconvoBuddies::fetch_deconvo_data("rse_gene")
 NicheNet data
 
 ```{r}
+#| label: NicheNet_load
 # Ligand target matrix. Target genes in rows, ligands in columns.
 ligand_target_matrix <- readRDS(paste0(data_dir, "nichenetr.dat/ligand_target_matrix_nsga2r_final.rds")) 
 lr_network <- readRDS(paste0(data_dir, "nichenetr.dat/lr_network_human_21122021.rds"))
@@ -69,6 +80,7 @@ lr_network <- readRDS(paste0(data_dir, "nichenetr.dat/lr_network_human_21122021.
 Getting lists of cell types and cell states.
 
 ```{r}
+#| label: cell_lists
 # Removing ambiguous cell type
 cell_types <- names(table(sce$cellType_broad_hc))
 cell_types <- cell_types[!cell_types %in% c("Ambiguous")]
@@ -79,6 +91,8 @@ cell_states <- unique(as.vector(sce$cellType_hc))
 Graphing correlation across cell states
 
 ```{r}
+#| label: fig-state_correlations
+#| fig-cap: "Heatmap of expression correlation across cell states."
 #| cache: true
 plot.cor.phi (input=t(counts(sce)),
               input.labels=sce$cellType_hc,
@@ -92,6 +106,8 @@ plot.cor.phi (input=t(counts(sce)),
 Graphing correlation across cell types
 
 ```{r}
+#| label: fig-type_correlations
+#| fig-cap: "Heatmap of expression correlation across cell types."
 #| cache: true
 plot.cor.phi (input=t(counts(sce)),
               input.labels=sce$cellType_broad_hc, 
@@ -105,6 +121,8 @@ plot.cor.phi (input=t(counts(sce)),
 Getting and plotting gene statistics
 
 ```{r}
+#| label: fig-specificty
+#| fig-cap: "Gene specificity plot. Ribosomal, mitochondrial and chrX  chrY genes have high abundance but low specificity. They may be excluded from the analysis."
 #| cache: true
 rownames(sce) <- make.unique(rownames(sce))
 sc.stat <- plot.scRNA.outlier(
@@ -121,6 +139,7 @@ rm(sc.stat)
 Gene-level QC
 
 ```{r}
+#| label: gene_qc
 #| eval: false
 # Removing ribosomal, mitochondrial and chrX  chrY genes
 sc.dat.filtered <- cleanup.genes (input=t(assay(sce)),
@@ -142,6 +161,7 @@ save(sce, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", "sce.rdata"))
 Loading QC-filtered SingeCellExperiment object (`sce`)
 
 ```{r}
+#| label: load_qc
 load(paste0(data_dir, "NotebookRData/HuukiResiduals/", "sce.rdata"))
 ```
 
@@ -150,6 +170,7 @@ load(paste0(data_dir, "NotebookRData/HuukiResiduals/", "sce.rdata"))
 Defining sample
 
 ```{r}
+#| label: sample_vars
 br_num = "Br2720"
 position = "post"
 sample = paste0(br_num,"_",position)
@@ -161,6 +182,7 @@ blk_sample = blk[intersect(rownames(sce), rownames(blk)),blk$Sample==sample]
 Initializing Prism object
 
 ```{r}
+#| label: new_prism
 #| eval: false
 myPrism <- new.prism(
   reference=t(as.matrix(counts(sce[rownames(blk_sample),]))), 
@@ -178,6 +200,7 @@ save(myPrism, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", "myPrism_",
 Running BayesPrism
 
 ```{r}
+#| label: bayesprism
 #| eval: false
 bp_res <- run.prism(prism = myPrism, n.cores=14)
 save(bp_res, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", "bp_res_", sample, ".rdata"))
@@ -186,8 +209,34 @@ save(bp_res, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", "bp_res_", s
 Loading stored BayesPrism prism object (`myPrism`) and results (`bp_res`)
 
 ```{r}
+#| label: load_bayesprism
 load(paste0(data_dir, "NotebookRData/HuukiResiduals/", "myPrism_", sample, ".rdata"))
 load(paste0(data_dir, "NotebookRData/HuukiResiduals/", "bp_res_", sample, ".rdata"))
+```
+
+Color Mapping
+
+```{r}
+#| label: color_dicts
+type_colors <- c(
+  Inhib = "#369acc", 
+  Oligo = "#f8e16f", 
+  OPC = "#6c584c", 
+  Excit = "#95cf92", 
+  Astro = "#9656a2", 
+  EndoMural = "#f4895f", 
+  Micro = "#de324c"
+)
+
+state_colors <- unlist(lapply(names(bp_res@prism@map), function(cell_type) {
+  states <- bp_res@prism@map[[cell_type]]
+  base_col <- type_colors[cell_type]
+  
+  shades <- colorRampPalette(c(lighten(base_col, 0.4), darken(base_col, 0.4)))(length(states))
+  
+  names(shades) <- states
+  return(shades)
+}))
 ```
 
 # 4. Calculating Residuals
@@ -195,6 +244,7 @@ load(paste0(data_dir, "NotebookRData/HuukiResiduals/", "bp_res_", sample, ".rdat
 Bulk sample selection
 
 ```{r}
+#| label: lib_vars
 lib_prep <- "Bulk"
 lib_type <- "polyA"
 ```
@@ -205,6 +255,7 @@ Calculating expressions per cell state
 -   `true_exp_mtx`: CTSE in matched snRNA-seq data from `{r} sample`
 
 ```{r}
+#| label: exp_mtxs
 #| eval: false
 inf_exp_mtx <- matrix(nrow = length(cell_states), 
                        ncol = length(colnames(bp_res@prism@mixture)),
@@ -234,6 +285,7 @@ save(true_exp_mtx, file=paste0(data_dir, "NotebookRData/HuukiResiduals/",
 Loading stored expression matrices
 
 ```{r}
+#| label: load_exp_mtxs
 load(paste0(data_dir, "NotebookRData/HuukiResiduals/", 
                               "inf_exp_mtx_", sample, "_", lib_prep, "_", lib_type,".rdata"))
 load(paste0(data_dir, "NotebookRData/HuukiResiduals/", 
@@ -243,6 +295,7 @@ load(paste0(data_dir, "NotebookRData/HuukiResiduals/",
 Calculating CPM and residuals
 
 ```{r}
+#| label: residual_calc
 inf_cpm_mtx <- (inf_exp_mtx/rowSums(inf_exp_mtx)) * 1e6
 true_cpm_mtx <- (true_exp_mtx/rowSums(true_exp_mtx)) * 1e6
 
@@ -256,6 +309,7 @@ residual_mtx <- true_cpm_mtx[cell_states, colnames(inf_cpm_mtx)] - inf_cpm_mtx[c
 Generating and saving average expression matrices
 
 ```{r}
+#| label: avg_exp
 #| eval: false
 # Getting average expression per cell type
 avg_type_expr <- avg_per_label(sce, sce$cellType_broad_hc, assay = "logcounts")
@@ -269,14 +323,215 @@ save(avg_state_expr, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", "avg
 Loading average expression matrices
 
 ```{r}
+#| label: load_avg_exp
 load(paste0(data_dir, "NotebookRData/HuukiResiduals/", "avg_type_expr.rdata"))
 load(paste0(data_dir, "NotebookRData/HuukiResiduals/", "avg_state_expr.rdata"))
 ```
 
-## 5.2 Omega tensor
+## 5.2 Directionality
+
+Getting average expression per sample per cell type
 
 ```{r}
-Omega <- build_Omega(avg_state_expr, ligand_target_matrix, lr_network, mask_threshold = 0.5, masking_type = "soft")
+#| label: state_sample
+#| eval: false
+
+state_sample_means <- aggregateAcrossCells(sce, 
+                                           ids = colData(sce)[, c("Sample", "cellType_hc")], 
+                                           statistics = "mean",
+                                           use.assay.type = "logcounts")
+save(state_sample_means, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", "state_sample_means.rdata"))
+```
+
+```{r}
+#| label: load_state_sample
+load(paste0(data_dir, "NotebookRData/HuukiResiduals/", "state_sample_means.rdata"))
+```
+
+```{r}
+#| label: state_sample_mtx
+expr_mat <- assays(state_sample_means)$logcounts
+meta <- as.data.frame(colData(state_sample_means))
+```
+
+Getting ligand-target correlations across cell states
+
+```{r}
+#| label: corr_func
+ligand_genes <- intersect(colnames(ligand_target_matrix), colnames(avg_state_expr))
+target_genes <- intersect(rownames(ligand_target_matrix), colnames(avg_state_expr))
+valid_states <- names(table(state_sample_means$cellType_hc)[table(state_sample_means$cellType_hc) > 4])
+
+sub_expr <- expr_mat[unique(c(ligand_genes, target_genes)), ]
+
+# Function to get correlations for a specific cell state
+get_state_correlations <- function(cell_state) {
+  cells <- which(meta$cellType_hc == cell_state)
+  
+  mat <- t(as.matrix(sub_expr[, cells]))
+  
+  cor_obj <- rcorr(mat, type = "spearman")
+  
+  r_matrix <- cor_obj$r[ligand_genes, target_genes]
+  p_matrix <- cor_obj$P[ligand_genes, target_genes]
+  
+  df <- data.frame(
+    ligand = rep(rownames(r_matrix), ncol(r_matrix)),
+    target = rep(colnames(r_matrix), each = nrow(r_matrix)),
+    cor    = as.vector(r_matrix),
+    pval   = as.vector(p_matrix),
+    state  = cell_state,
+    stringsAsFactors = FALSE
+  )
+  
+  return(df)
+}
+```
+
+```{r}
+#| label: run_corr
+for (i in seq_along(valid_states)) {
+  current_state <- valid_states[i]
+  
+  cat(sprintf("[%d/%d] Processing State: %s... \n", i, length(valid_states), current_state))
+  
+  if (file.exists(paste0(data_dir, "NotebookRData/HuukiResiduals/correlation_results/", 
+                            current_state, "_cors.rds"))){next}
+  
+  res <- get_state_correlations(current_state)
+  
+  saveRDS(res, file = paste0(data_dir, "NotebookRData/HuukiResiduals/correlation_results/", 
+                             current_state, "_cors.rds"))
+  
+  rm(res)
+  gc()
+}
+```
+
+```{r}
+#| label: load_corr
+#| eval: false
+result_files <- list.files(paste0(data_dir, "NotebookRData/HuukiResiduals/correlation_results/"), pattern = "\\.rds$", full.names = TRUE)
+
+all_cors_dt <- rbindlist(lapply(result_files, function(f) {
+  tmp <- readRDS(f)
+  
+  tmp <- tmp[!is.na(tmp$cor),]
+  return(as.data.table(tmp)) 
+}))
+
+setkey(all_cors_dt, ligand, target, state)
+```
+
+Define directionality consensus scores across cell states
+
+```{r}
+#| label: get_dir_summ
+#| eval: false
+
+consensus_summary <- all_cors_dt[, {
+  z_vals <- qnorm(pmax(pval, 1e-300) / 2, lower.tail = FALSE) * sign(cor)
+  
+  stouffer_z <- sum(z_vals, na.rm = TRUE) / sqrt(.N)
+  
+  pos_count <- sum(cor > 0, na.rm = TRUE)
+  neg_count <- sum(cor < 0, na.rm = TRUE)
+  consistency <- max(pos_count, neg_count) / .N
+  
+  global_dir <- ifelse(pos_count >= neg_count, 1, -1)
+  
+  .(
+    n_states      = .N,
+    consensus_z   = stouffer_z,
+    consistency   = consistency,
+    global_dir    = global_dir,
+    avg_cor       = mean(cor, na.rm = TRUE)
+  )
+}, by = .(ligand, target)]
+
+save(consensus_summary, file=paste0(data_dir, "NotebookRData/Huukiresiduals/", "consensus_summary.rdata"))
+
+# Filter for Significance
+# A Z-score > 1.96 or < -1.96 roughly corresponds to p < 0.05
+#conconsensus_summary[, final_pval := 2 * pnorm(abs(consensus_z), lower.tail = FALSE)]
+```
+
+```{r}
+#| label: load_dir_summ
+load(paste0(data_dir, "NotebookRData/Huukiresiduals/", "consensus_summary.rdata"))
+```
+
+Visualizing consensus data
+```{r}
+#| label: fig-dir_histogram
+#| fig-cap: "Histogram of directionality Z scores. Consensus score represents the direction of gene correlations across cell states,"
+ggside(consensus_summary, mapping = aes(x = (consensus_z))) +
+  geom_histogram(bins = 100)
+```
+
+```{r}
+#| label: fig-dir_vs_consisntency
+#| fig-cap: "Directionality z scores vs, consistency. Consistency represents what percentage of cell states showed a consistent directionality."
+ggside(consensus_summary[consensus_summary$ligand %in% ligand_genes[c(1:5)]], mapping = aes(x = consensus_z, y = consistency, color = n_states)) +
+  geom_point(alpha = 0.5) +
+  labs(x = "z-Score", y = "Consistency") + 
+  anno_top(size = 0.3) +
+  ggalign() +
+  geom_density(aes(consensus_z, y = after_stat(density)), position = "stack") +
+  anno_right(size = 0.3) +
+  ggalign() +
+  geom_density(aes(x = after_stat(density), y = consistency), position = "stack")
+```
+
+Aggregating consensus scores into a directionality matrix
+
+```{r}
+#| label: dir_mtx
+directionality_dt <- dcast(
+  consensus_summary, 
+  ligand ~ target, 
+  value.var = "consensus_z",
+  fill = NA 
+)
+
+directionality_mtx <- as.matrix(directionality_dt[, -1])
+rownames(directionality_mtx) <- directionality_dt$ligand
+directionality_mtx <- directionality_mtx[ligand_genes, target_genes]
+```
+
+Getting a sign matrix
+
+```{r}
+#| label: sign_mtx
+sign_mtx <- sign(directionality_mtx)
+sign_mtx[which(is.na(sign_mtx))] <- 1
+sign_mtx[which(sign_mtx == 0)] <- 1
+
+W_matrix <- t(ligand_target_matrix[target_genes, ligand_genes])
+signed_W_mtx <- sign_mtx * W_matrix # Provide this instead of ligand_target_matrix in build_Omega()
+```
+
+Modifying W matrix with consensus scores
+```{r}
+#| label: norm_dir
+base_dir <- quantile(abs(directionality_mtx), 0.95, na.rm = TRUE)
+norm_dir_mtx <- directionality_mtx/base_dir
+
+norm_dir_mtx[which(is.na(norm_dir_mtx))] <- mean(norm_dir_mtx, na.rm=TRUE)
+
+cor_W_mtx <- norm_dir_mtx * W_matrix
+```
+
+
+## 5.3 Omega tensor
+
+```{r}
+#| label: omega
+Omega <- build_Omega(avg_state_expr, t(cor_W_mtx), lr_network, mask_threshold = 0.1, masking_type = "soft")
+```
+
+```{r}
+#| label: omega_summaries
 niche_strength <- apply(Omega, c(1,2), sum)
 gene_pressure <- apply(Omega, c(2,3), sum)
 ```
@@ -297,9 +552,10 @@ ggheatmap(niche_strength) +
   align_dendro()
 ```
 
-## 5.3 Weighted Omega Tensor
+## 5.4 Weighted Omega Tensor
 
 ```{r}
+#| label: weigh_omega
 avg_props <- table(sce$cellType_hc) / ncol(sce)
 Weighted_Omega <- Omega
 
@@ -332,6 +588,7 @@ ggheatmap(niche_strength_weighted) +
 Making a dataframe containing residual and gene pressure data for all states
 
 ```{r}
+#| label: residual_test_df
 results_list <- list()
 common_genes <- intersect(colnames(gene_pressure), colnames(residual_mtx))
 
@@ -364,6 +621,7 @@ aggregated_df <- do.call(rbind, results_list)
 Making a dataframe for plotting
 
 ```{r}
+#| label: plot_df
 types_to_plot <- c(
   "Astro", 
   "EndoMural", 
@@ -373,31 +631,68 @@ types_to_plot <- c(
   "Inhib",
   "Excit"
   )
-#types_to_plot <- c("Micro")
+#types_to_plot <- c("OPC")
 #states_to_plot <- c("Excit_09", "Excit_05", "Excit_10")
 
-plot_df <- aggregated_df[aggregated_df$type %in% types_to_plot #& aggregated_df$gene_pressure < 4
+plot_df <- aggregated_df[aggregated_df$type %in% types_to_plot 
+                         #& aggregated_df$residual != 0
                          , ]
-plot_df$residual <- abs(plot_df$residual)
+#plot_df$residual <- abs(plot_df$residual)
+#plot_df$gene_pressure <- abs(plot_df$gene_pressure)
+#plot_df$weighted_gene_pressure <- abs(plot_df$weighted_gene_pressure)
+
+plot_df <- plot_df[(plot_df$gene_pressure) < quantile(plot_df$gene_pressure, 0.975)
+                   & (plot_df$gene_pressure) > quantile(plot_df$gene_pressure, 0.025)
+                   & plot_df$residual < quantile(plot_df$residual, 0.975)
+                   & plot_df$residual > quantile(plot_df$residual, 0.025)
+                   , ]
+
+# test
+plot_df$test <- sample(plot_df$gene_pressure)
+
+# DIRECTIONALITY
+#plot_df$residual <- (plot_df$residual)
+#plot_df$gene_pressure <- (plot_df$gene_pressure)
+#plot_df$weighted_gene_pressure <- (plot_df$weighted_gene_pressure)
+#directional_mask <- plot_df$residual/abs(plot_df$residual)
+#plot_df$gene_pressure <- plot_df$gene_pressure * directional_mask
+#plot_df$weighted_gene_pressure <- plot_df$weighted_gene_pressure * directional_mask
+#lot_df$test <- plot_df$test * directional_mask
 
 cor.test((plot_df$residual), plot_df$gene_pressure, method="spearman")
 ```
 
-Gene pressre plots
+Gene pressure plots
 
 ```{r}
+#| label: fig-gene_pressure
+#| fig-cap: !expr paste0("Effect of cell-state-specific gene pressure on residuals between the BayesPrism-generated gene expressions and the observed snRNA-seq expression in sample ", sample, ". The top plot top shows the mean errors binned by gene pressure score ranges. Notably, a positive trend can be observed, which is supported by the spearman correlation rho = ", cor((plot_df$residual), plot_df$gene_pressure, method="spearman"), ". The bottom plot shows the scatter plot for gene pressure vs. error.")
+
 ggside(plot_df, mapping = aes(gene_pressure, (residual), colour = type)) -
   scheme_theme(theme_bw()) +
   layout_theme(panel.border = element_blank()) +
-  geom_point(alpha = 0.5, size = 0.5) +
+  geom_point(size = 0.1) +
+  scale_color_manual(values = type_colors) +
   geom_smooth(method = "lm", color = "darkgray") +
-  labs(x = "Gene Pressure", y = "AbsError") +
+  labs(y = "Error") + 
+  # Density plot
+  anno_bottom(size = 0.3) +
+  ggalign() +
+  geom_density(aes(x = gene_pressure, y = after_stat(density), colour = type), position = "stack") +
+  scale_color_manual(values = type_colors) +
+  #labs(title = paste("Effect of Gene Pressure on BayesPrism Error"))+
+  # Density plot
+  anno_right(size = 0.1) +
+  ggalign() +
+  geom_density(aes(x = after_stat(density), y = residual, colour = type), position = "stack") +
+  scale_color_manual(values = type_colors) +
+  theme(axis.text.x = element_text(angle = -90, vjust = 0.5, hjust = 0)) +
   # Bar plot
   anno_top(size = 1) +
   ggalign() +
   stat_summary_bin(
     mapping = aes(x = gene_pressure, y = (residual), fill = after_stat(count)),
-    bins = 50,
+    bins = 30,
     geom = "bar",
     fun.data = function(x) {
       data.frame(
@@ -407,27 +702,30 @@ ggside(plot_df, mapping = aes(gene_pressure, (residual), colour = type)) -
     }
   ) +
   scale_fill_gradient(low = "lightgrey", high = "#08306b", name = "Gene Count") +
-  labs(title = paste("Effect of Gene Pressure on BayesPrism Error"), 
-       y = "Mean AbsError")
+  labs(x = "Gene Pressure", y = "Mean Error")
 ```
 
 Weighted gene pressure plots
 
 ```{r}
+#| label: fig-weighted_gene_pressure
+#| fig-cap: !expr paste0("Effect of weighted cell-state-specific gene pressure on residuals between the BayesPrism-generated gene expressions and the observed snRNA-seq expression in sample ", sample, ". rho = ", cor((plot_df$residual), plot_df$weighted_gene_pressure, method="spearman"), ".")
+
 cor.test((plot_df$residual), plot_df$weighted_gene_pressure, method="spearman")
 
 ggside(plot_df, mapping = aes(weighted_gene_pressure, (residual), colour = type)) -
   scheme_theme(theme_bw()) +
   layout_theme(panel.border = element_blank()) +
   geom_point(alpha = 0.5, size = 0.5) +
+  scale_color_manual(values = type_colors) +
   geom_smooth(method = "lm", color = "darkgray") +
-  labs(x = "Weighted Gene Pressure", y = "AbsError") +
+  labs(x = "Weighted Gene Pressure", y = "Error") +
   # Bar plot
   anno_top(size = 1) +
   ggalign() +
   stat_summary_bin(
     mapping = aes(x = weighted_gene_pressure, y = (residual), fill = after_stat(count)),
-    bins = 50,
+    bins = 30,
     geom = "bar",
     fun.data = function(x) {
       data.frame(
@@ -438,5 +736,5 @@ ggside(plot_df, mapping = aes(weighted_gene_pressure, (residual), colour = type)
   ) +
   scale_fill_gradient(low = "lightgrey", high = "#08306b", name = "Gene Count") +
   labs(title = paste("Effect of Weighted Gene Pressure on BayesPrism Error"), 
-       y = "Mean AbsError")
+       y = "Mean Error")
 ```
