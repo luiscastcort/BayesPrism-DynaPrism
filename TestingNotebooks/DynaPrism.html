@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.26">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>DynaPrism</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="DynaPrism_files/libs/clipboard/clipboard.min.js"></script>
+<script src="DynaPrism_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="DynaPrism_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="DynaPrism_files/libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="DynaPrism_files/libs/quarto-html/popper.min.js"></script>
+<script src="DynaPrism_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="DynaPrism_files/libs/quarto-html/anchor.min.js"></script>
+<link href="DynaPrism_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="DynaPrism_files/libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="DynaPrism_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="DynaPrism_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="DynaPrism_files/libs/bootstrap/bootstrap-9e3ffae467580fdb927a41352e75a2e0.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">DynaPrism</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="environment-set-up" class="level1">
+<h1>0. Environment Set-Up</h1>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(snowfall)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'snowfall' was built under R version 4.5.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: snow</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gplots)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'gplots' was built under R version 4.5.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+---------------------
+gplots 3.3.0 loaded:
+  * Use citation('gplots') for citation info.
+  * Homepage: https://talgalili.github.io/gplots/
+  * Report issues: https://github.com/talgalili/gplots/issues
+  * Ask questions: https://stackoverflow.com/questions/tagged/gplots
+  * Suppress this message with: suppressPackageStartupMessages(library(gplots))
+---------------------</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'gplots'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:stats':
+
+    lowess</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(BiocParallel)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'BiocParallel' was built under R version 4.5.2</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(scran)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'scran' was built under R version 4.5.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: SingleCellExperiment</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'SingleCellExperiment' was built under R version 4.5.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: SummarizedExperiment</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'SummarizedExperiment' was built under R version 4.5.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: MatrixGenerics</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'MatrixGenerics' was built under R version 4.5.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: matrixStats</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'MatrixGenerics'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:matrixStats':
+
+    colAlls, colAnyNAs, colAnys, colAvgsPerRowSet, colCollapse,
+    colCounts, colCummaxs, colCummins, colCumprods, colCumsums,
+    colDiffs, colIQRDiffs, colIQRs, colLogSumExps, colMadDiffs,
+    colMads, colMaxs, colMeans2, colMedians, colMins, colOrderStats,
+    colProds, colQuantiles, colRanges, colRanks, colSdDiffs, colSds,
+    colSums2, colTabulates, colVarDiffs, colVars, colWeightedMads,
+    colWeightedMeans, colWeightedMedians, colWeightedSds,
+    colWeightedVars, rowAlls, rowAnyNAs, rowAnys, rowAvgsPerColSet,
+    rowCollapse, rowCounts, rowCummaxs, rowCummins, rowCumprods,
+    rowCumsums, rowDiffs, rowIQRDiffs, rowIQRs, rowLogSumExps,
+    rowMadDiffs, rowMads, rowMaxs, rowMeans2, rowMedians, rowMins,
+    rowOrderStats, rowProds, rowQuantiles, rowRanges, rowRanks,
+    rowSdDiffs, rowSds, rowSums2, rowTabulates, rowVarDiffs, rowVars,
+    rowWeightedMads, rowWeightedMeans, rowWeightedMedians,
+    rowWeightedSds, rowWeightedVars</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: GenomicRanges</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'GenomicRanges' was built under R version 4.5.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: stats4</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: BiocGenerics</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'BiocGenerics' was built under R version 4.5.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: generics</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'generics'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:base':
+
+    as.difftime, as.factor, as.ordered, intersect, is.element, setdiff,
+    setequal, union</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'BiocGenerics'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:stats':
+
+    IQR, mad, sd, var, xtabs</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:base':
+
+    anyDuplicated, aperm, append, as.data.frame, basename, cbind,
+    colnames, dirname, do.call, duplicated, eval, evalq, Filter, Find,
+    get, grep, grepl, is.unsorted, lapply, Map, mapply, match, mget,
+    order, paste, pmax, pmax.int, pmin, pmin.int, Position, rank,
+    rbind, Reduce, rownames, sapply, saveRDS, table, tapply, unique,
+    unsplit, which.max, which.min</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: S4Vectors</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'S4Vectors' was built under R version 4.5.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'S4Vectors'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:gplots':
+
+    space</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:utils':
+
+    findMatches</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:base':
+
+    expand.grid, I, unname</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: IRanges</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'IRanges' was built under R version 4.5.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'IRanges'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:grDevices':
+
+    windows</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: Seqinfo</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'Seqinfo' was built under R version 4.5.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: Biobase</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'Biobase' was built under R version 4.5.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Welcome to Bioconductor
+
+    Vignettes contain introductory material; view with
+    'browseVignettes()'. To cite Bioconductor, see
+    'citation("Biobase")', and for packages 'citation("pkgname")'.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'Biobase'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:MatrixGenerics':
+
+    rowMedians</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:matrixStats':
+
+    anyMissing, rowMedians</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: scuttle</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'scuttle' was built under R version 4.5.2</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(stats)</span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(utils)</span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(NMF)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'NMF' was built under R version 4.5.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: registry</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'registry' was built under R version 4.5.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: rngtools</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'rngtools' was built under R version 4.5.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: cluster</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>NMF - BioConductor layer [OK] | Shared memory capabilities [NO: windows] | Cores 2/2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'NMF'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:S4Vectors':
+
+    nrun</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:generics':
+
+    fit</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:BiocParallel':
+
+    register</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(Matrix)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'Matrix' was built under R version 4.5.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'Matrix'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:S4Vectors':
+
+    expand</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(SingleCellExperiment)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb70"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"../BayesPrism/R/classes.R"</span>)</span>
+<span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"../BayesPrism/R/new_prism.R"</span>)</span>
+<span id="cb70-3"><a href="#cb70-3" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"../BayesPrism/R/run_prism.R"</span>)</span>
+<span id="cb70-4"><a href="#cb70-4" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"../BayesPrism/R/run_gibbs.R"</span>)</span>
+<span id="cb70-5"><a href="#cb70-5" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"../BayesPrism/R/JointPost_functions.R"</span>)</span>
+<span id="cb70-6"><a href="#cb70-6" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"../BayesPrism/R/update_reference.R"</span>)</span>
+<span id="cb70-7"><a href="#cb70-7" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"../BayesPrism/R/optim_functions_MAP.R"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb71"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"../R/Omega_tensor.R"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb72"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a>data_dir <span class="ot">&lt;-</span> <span class="st">"../data/"</span></span>
+<span id="cb72-2"><a href="#cb72-2" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.exists</span>(data_dir)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] TRUE</code></pre>
+</div>
+</div>
+</section>
+<section id="loading-data" class="level1">
+<h1>1. Loading Data</h1>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb74"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a>blk <span class="ot">&lt;-</span> DeconvoBuddies<span class="sc">::</span><span class="fu">fetch_deconvo_data</span>(<span class="st">"rse_gene"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb75"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/DynaPrism/"</span>, <span class="st">"sce.rdata"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Getting lists of cell types and cell states.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb76"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb76-1"><a href="#cb76-1" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>cellType_hc <span class="ot">&lt;-</span> <span class="fu">droplevels</span>(sce<span class="sc">$</span>cellType_hc)</span>
+<span id="cb76-2"><a href="#cb76-2" aria-hidden="true" tabindex="-1"></a>sce<span class="sc">$</span>cellType_broad_hc <span class="ot">&lt;-</span> <span class="fu">droplevels</span>(sce<span class="sc">$</span>cellType_broad_hc)</span>
+<span id="cb76-3"><a href="#cb76-3" aria-hidden="true" tabindex="-1"></a>cell_types <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">as.vector</span>(sce<span class="sc">$</span>cellType_broad_hc))</span>
+<span id="cb76-4"><a href="#cb76-4" aria-hidden="true" tabindex="-1"></a>cell_states <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">as.vector</span>(sce<span class="sc">$</span>cellType_hc))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="omega-tensor" class="level1">
+<h1>2. Omega tensor</h1>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb77"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/DynaPrism/"</span>, <span class="st">"Omega.rdata"</span>))</span>
+<span id="cb77-2"><a href="#cb77-2" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/DynaPrism/"</span>, <span class="st">"Weighted_Omega.rdata"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="bayesprism" class="level1">
+<h1>2. BayesPrism</h1>
+<section id="new-prism" class="level2">
+<h2 class="anchored" data-anchor-id="new-prism">2.1 New Prism</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb78"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb78-1"><a href="#cb78-1" aria-hidden="true" tabindex="-1"></a>br_num <span class="ot">=</span> <span class="st">"Br2720"</span></span>
+<span id="cb78-2"><a href="#cb78-2" aria-hidden="true" tabindex="-1"></a>position <span class="ot">=</span> <span class="st">"post"</span></span>
+<span id="cb78-3"><a href="#cb78-3" aria-hidden="true" tabindex="-1"></a>sample <span class="ot">=</span> <span class="fu">paste0</span>(br_num,<span class="st">"_"</span>,position)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb79"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(blk) <span class="ot">&lt;-</span> <span class="fu">rowData</span>(blk)<span class="sc">$</span>Symbol</span>
+<span id="cb79-2"><a href="#cb79-2" aria-hidden="true" tabindex="-1"></a>blk_sample <span class="ot">=</span> blk[<span class="fu">intersect</span>(<span class="fu">rownames</span>(sce), <span class="fu">rownames</span>(blk)),blk<span class="sc">$</span>Sample<span class="sc">==</span>sample]</span>
+<span id="cb79-3"><a href="#cb79-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb79-4"><a href="#cb79-4" aria-hidden="true" tabindex="-1"></a>myPrism <span class="ot">&lt;-</span> <span class="fu">new.prism</span>(</span>
+<span id="cb79-5"><a href="#cb79-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">reference=</span><span class="fu">t</span>(<span class="fu">as.matrix</span>(<span class="fu">counts</span>(sce))), </span>
+<span id="cb79-6"><a href="#cb79-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">mixture=</span><span class="fu">t</span>(<span class="fu">assay</span>(blk_sample)),</span>
+<span id="cb79-7"><a href="#cb79-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">input.type=</span><span class="st">"count.matrix"</span>, </span>
+<span id="cb79-8"><a href="#cb79-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">cell.type.labels =</span> sce<span class="sc">$</span>cellType_broad_hc, </span>
+<span id="cb79-9"><a href="#cb79-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">cell.state.labels =</span> sce<span class="sc">$</span>cellType_hc,</span>
+<span id="cb79-10"><a href="#cb79-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">key =</span> <span class="cn">NULL</span>,</span>
+<span id="cb79-11"><a href="#cb79-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">outlier.cut=</span><span class="fl">0.01</span>,</span>
+<span id="cb79-12"><a href="#cb79-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">outlier.fraction=</span><span class="fl">0.1</span>,</span>
+<span id="cb79-13"><a href="#cb79-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb79-14"><a href="#cb79-14" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(myPrism, <span class="at">file=</span><span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/DynaPrism/"</span>, <span class="st">"myPrism_"</span>, sample, <span class="st">".rdata"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb80"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb80-1"><a href="#cb80-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/DynaPrism/"</span>, <span class="st">"myPrism_"</span>, sample, <span class="st">".rdata"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="run-bayesprism" class="level2">
+<h2 class="anchored" data-anchor-id="run-bayesprism">2.2 Run BayesPrism</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb81"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a>bp_res <span class="ot">&lt;-</span> <span class="fu">run.prism</span>(<span class="at">prism =</span> myPrism, <span class="at">n.cores=</span><span class="dv">14</span>)</span>
+<span id="cb81-2"><a href="#cb81-2" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(bp_res, <span class="at">file=</span><span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/DynaPrism/"</span>, <span class="st">"bp_res_"</span>, sample, <span class="st">".rdata"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb82"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="fu">paste0</span>(data_dir, <span class="st">"NotebookRData/DynaPrism/"</span>, <span class="st">"bp_res_"</span>, sample, <span class="st">".rdata"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="functions" class="level3">
+<h3 class="anchored" data-anchor-id="functions">2.2.1 Functions</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb83"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb83-1"><a href="#cb83-1" aria-hidden="true" tabindex="-1"></a><span class="co">#' An S4 class to represent the input, X, phi; alpha and controls of Gibbs sampling </span></span>
+<span id="cb83-2"><a href="#cb83-2" aria-hidden="true" tabindex="-1"></a><span class="co">#'</span></span>
+<span id="cb83-3"><a href="#cb83-3" aria-hidden="true" tabindex="-1"></a><span class="co">#' @slot phi an array of dimension K*G to denote reference matrix</span></span>
+<span id="cb83-4"><a href="#cb83-4" aria-hidden="true" tabindex="-1"></a><span class="co">#' @slot X a matrix of dimension N*G to denote bulk matrix</span></span>
+<span id="cb83-5"><a href="#cb83-5" aria-hidden="true" tabindex="-1"></a><span class="co">#' @slot theta a matrix of dimension K*N to denote the cell type fraction in each bulk</span></span>
+<span id="cb83-6"><a href="#cb83-6" aria-hidden="true" tabindex="-1"></a><span class="co">#' @slot alpha a numeric value to denote the symmetric Dirichlet prior, fixed to 1E-8 </span></span>
+<span id="cb83-7"><a href="#cb83-7" aria-hidden="true" tabindex="-1"></a><span class="co">#' @slot gibbs.control a list containing parameters of the Gibbs sampler</span></span>
+<span id="cb83-8"><a href="#cb83-8" aria-hidden="true" tabindex="-1"></a><span class="fu">setClass</span>(<span class="st">"gibbsSamplerOmega"</span>,</span>
+<span id="cb83-9"><a href="#cb83-9" aria-hidden="true" tabindex="-1"></a>         <span class="at">slots =</span> <span class="fu">c</span>(</span>
+<span id="cb83-10"><a href="#cb83-10" aria-hidden="true" tabindex="-1"></a>           <span class="at">reference =</span> <span class="st">"reference"</span>,</span>
+<span id="cb83-11"><a href="#cb83-11" aria-hidden="true" tabindex="-1"></a>           <span class="at">X =</span> <span class="st">"matrix"</span>,</span>
+<span id="cb83-12"><a href="#cb83-12" aria-hidden="true" tabindex="-1"></a>           <span class="at">Omega =</span> <span class="st">"array"</span>,</span>
+<span id="cb83-13"><a href="#cb83-13" aria-hidden="true" tabindex="-1"></a>           <span class="at">gibbs.control =</span> <span class="st">"list"</span></span>
+<span id="cb83-14"><a href="#cb83-14" aria-hidden="true" tabindex="-1"></a>         ),</span>
+<span id="cb83-15"><a href="#cb83-15" aria-hidden="true" tabindex="-1"></a>         <span class="at">prototype =</span> <span class="fu">list</span>(</span>
+<span id="cb83-16"><a href="#cb83-16" aria-hidden="true" tabindex="-1"></a>           <span class="at">reference =</span> <span class="cn">NULL</span>,</span>
+<span id="cb83-17"><a href="#cb83-17" aria-hidden="true" tabindex="-1"></a>           <span class="at">X =</span> <span class="fu">matrix</span>(),</span>
+<span id="cb83-18"><a href="#cb83-18" aria-hidden="true" tabindex="-1"></a>           <span class="at">gibbs.control =</span> <span class="fu">list</span>(<span class="at">chain.length =</span> <span class="cn">NULL</span>,</span>
+<span id="cb83-19"><a href="#cb83-19" aria-hidden="true" tabindex="-1"></a>                                <span class="at">burn.in =</span> <span class="cn">NULL</span>,</span>
+<span id="cb83-20"><a href="#cb83-20" aria-hidden="true" tabindex="-1"></a>                                <span class="at">thinning =</span> <span class="cn">NULL</span>,</span>
+<span id="cb83-21"><a href="#cb83-21" aria-hidden="true" tabindex="-1"></a>                                <span class="at">n.cores =</span> <span class="cn">NULL</span>,</span>
+<span id="cb83-22"><a href="#cb83-22" aria-hidden="true" tabindex="-1"></a>                                <span class="at">seed =</span> <span class="cn">NULL</span>,</span>
+<span id="cb83-23"><a href="#cb83-23" aria-hidden="true" tabindex="-1"></a>                                <span class="at">alpha =</span> <span class="cn">NULL</span>, </span>
+<span id="cb83-24"><a href="#cb83-24" aria-hidden="true" tabindex="-1"></a>                                <span class="at">beta =</span> <span class="cn">NULL</span>)</span>
+<span id="cb83-25"><a href="#cb83-25" aria-hidden="true" tabindex="-1"></a>         ),</span>
+<span id="cb83-26"><a href="#cb83-26" aria-hidden="true" tabindex="-1"></a>         <span class="at">validity =</span> <span class="cf">function</span>(object){</span>
+<span id="cb83-27"><a href="#cb83-27" aria-hidden="true" tabindex="-1"></a>            errors <span class="ot">&lt;-</span> <span class="fu">character</span>()</span>
+<span id="cb83-28"><a href="#cb83-28" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb83-29"><a href="#cb83-29" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span>(<span class="fu">is</span>(object<span class="sc">@</span>reference, <span class="st">"refPhi"</span>))</span>
+<span id="cb83-30"><a href="#cb83-30" aria-hidden="true" tabindex="-1"></a>                ref.gene <span class="ot">&lt;-</span> <span class="fu">colnames</span>(object<span class="sc">@</span>reference<span class="sc">@</span>phi)</span>
+<span id="cb83-31"><a href="#cb83-31" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span>(<span class="fu">is</span>(object<span class="sc">@</span>reference, <span class="st">"refTumor"</span>))</span>
+<span id="cb83-32"><a href="#cb83-32" aria-hidden="true" tabindex="-1"></a>                ref.gene <span class="ot">&lt;-</span> <span class="fu">colnames</span>(object<span class="sc">@</span>reference<span class="sc">@</span>psi_mal)</span>
+<span id="cb83-33"><a href="#cb83-33" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb83-34"><a href="#cb83-34" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span>(<span class="sc">!</span><span class="fu">identical</span>(ref.gene, <span class="fu">colnames</span>(object<span class="sc">@</span>X))){</span>
+<span id="cb83-35"><a href="#cb83-35" aria-hidden="true" tabindex="-1"></a>                msg <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="st">"Gene names do not match"</span>)</span>
+<span id="cb83-36"><a href="#cb83-36" aria-hidden="true" tabindex="-1"></a>                errors <span class="ot">&lt;-</span> <span class="fu">c</span>(errors, msg)</span>
+<span id="cb83-37"><a href="#cb83-37" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb83-38"><a href="#cb83-38" aria-hidden="true" tabindex="-1"></a>                                                        </span>
+<span id="cb83-39"><a href="#cb83-39" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (<span class="fu">length</span>(errors) <span class="sc">==</span> <span class="dv">0</span>) <span class="cn">TRUE</span> <span class="cf">else</span> errors</span>
+<span id="cb83-40"><a href="#cb83-40" aria-hidden="true" tabindex="-1"></a>         }</span>
+<span id="cb83-41"><a href="#cb83-41" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb84"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a><span class="co">#' An S4 class to represent the output of run.prism</span></span>
+<span id="cb84-2"><a href="#cb84-2" aria-hidden="true" tabindex="-1"></a><span class="co">#'</span></span>
+<span id="cb84-3"><a href="#cb84-3" aria-hidden="true" tabindex="-1"></a><span class="co">#' @slot input.initial.cellState an S4 object of class gibbsSampler </span></span>
+<span id="cb84-4"><a href="#cb84-4" aria-hidden="true" tabindex="-1"></a><span class="co">#'      to store the input of initial Gibbs sampling over cell states </span></span>
+<span id="cb84-5"><a href="#cb84-5" aria-hidden="true" tabindex="-1"></a><span class="co">#' @slot posterior.initial.cellState an S4 object of class jointPost </span></span>
+<span id="cb84-6"><a href="#cb84-6" aria-hidden="true" tabindex="-1"></a><span class="co">#'      to store the results of initial Gibbs sampling over cell states</span></span>
+<span id="cb84-7"><a href="#cb84-7" aria-hidden="true" tabindex="-1"></a><span class="co">#' @slot posterior.initial.cellType an S4 object of class jointPost </span></span>
+<span id="cb84-8"><a href="#cb84-8" aria-hidden="true" tabindex="-1"></a><span class="co">#'      to store the results over cell types merged from posterior.initial.cellState</span></span>
+<span id="cb84-9"><a href="#cb84-9" aria-hidden="true" tabindex="-1"></a><span class="co">#' @slot reference.update an S4 object of class reference </span></span>
+<span id="cb84-10"><a href="#cb84-10" aria-hidden="true" tabindex="-1"></a><span class="co">#'      to store the updated reference</span></span>
+<span id="cb84-11"><a href="#cb84-11" aria-hidden="true" tabindex="-1"></a><span class="co">#' @slot posterior.theta_f matrix to represent the cell type fraction from the final Gibbs sampling</span></span>
+<span id="cb84-12"><a href="#cb84-12" aria-hidden="true" tabindex="-1"></a><span class="co">#' @slot control_param a list to store all </span></span>
+<span id="cb84-13"><a href="#cb84-13" aria-hidden="true" tabindex="-1"></a><span class="co">#'</span></span>
+<span id="cb84-14"><a href="#cb84-14" aria-hidden="true" tabindex="-1"></a><span class="co">#' @export</span></span>
+<span id="cb84-15"><a href="#cb84-15" aria-hidden="true" tabindex="-1"></a><span class="fu">setClass</span>(<span class="st">"BayesPrismOmega"</span>,</span>
+<span id="cb84-16"><a href="#cb84-16" aria-hidden="true" tabindex="-1"></a>         <span class="at">slots =</span> <span class="fu">c</span>(</span>
+<span id="cb84-17"><a href="#cb84-17" aria-hidden="true" tabindex="-1"></a>           <span class="at">prism =</span> <span class="st">"prism"</span>,</span>
+<span id="cb84-18"><a href="#cb84-18" aria-hidden="true" tabindex="-1"></a>           <span class="at">Omega =</span> <span class="st">"array"</span>,</span>
+<span id="cb84-19"><a href="#cb84-19" aria-hidden="true" tabindex="-1"></a>           <span class="at">posterior.initial.cellState =</span> <span class="st">"jointPost"</span>,</span>
+<span id="cb84-20"><a href="#cb84-20" aria-hidden="true" tabindex="-1"></a>           <span class="at">posterior.initial.cellType =</span> <span class="st">"jointPost"</span>,</span>
+<span id="cb84-21"><a href="#cb84-21" aria-hidden="true" tabindex="-1"></a>           <span class="at">reference.update =</span> <span class="st">"reference"</span>,</span>
+<span id="cb84-22"><a href="#cb84-22" aria-hidden="true" tabindex="-1"></a>           <span class="at">posterior.theta_f =</span> <span class="st">"theta_f"</span>,</span>
+<span id="cb84-23"><a href="#cb84-23" aria-hidden="true" tabindex="-1"></a>           <span class="at">control_param =</span> <span class="st">"list"</span></span>
+<span id="cb84-24"><a href="#cb84-24" aria-hidden="true" tabindex="-1"></a>         ),</span>
+<span id="cb84-25"><a href="#cb84-25" aria-hidden="true" tabindex="-1"></a>         <span class="at">prototype =</span> <span class="fu">list</span>(</span>
+<span id="cb84-26"><a href="#cb84-26" aria-hidden="true" tabindex="-1"></a>           <span class="at">prism =</span> <span class="fu">new</span>(<span class="st">"prism"</span>),</span>
+<span id="cb84-27"><a href="#cb84-27" aria-hidden="true" tabindex="-1"></a>           <span class="at">posterior.initial.cellState =</span> <span class="fu">new</span>(<span class="st">"jointPost"</span>),</span>
+<span id="cb84-28"><a href="#cb84-28" aria-hidden="true" tabindex="-1"></a>           <span class="at">posterior.initial.cellType =</span> <span class="fu">new</span>(<span class="st">"jointPost"</span>),</span>
+<span id="cb84-29"><a href="#cb84-29" aria-hidden="true" tabindex="-1"></a>           <span class="at">reference.update =</span> <span class="cn">NULL</span>,</span>
+<span id="cb84-30"><a href="#cb84-30" aria-hidden="true" tabindex="-1"></a>           <span class="at">posterior.theta_f =</span> <span class="cn">NULL</span>,</span>
+<span id="cb84-31"><a href="#cb84-31" aria-hidden="true" tabindex="-1"></a>           <span class="at">control_param =</span> <span class="fu">list</span>(<span class="at">gibbs.control =</span> <span class="fu">list</span>(<span class="at">chain.length =</span> <span class="cn">NULL</span>,</span>
+<span id="cb84-32"><a href="#cb84-32" aria-hidden="true" tabindex="-1"></a>                                                      <span class="at">burn.in =</span> <span class="cn">NULL</span>,</span>
+<span id="cb84-33"><a href="#cb84-33" aria-hidden="true" tabindex="-1"></a>                                                      <span class="at">thinning =</span> <span class="cn">NULL</span>,</span>
+<span id="cb84-34"><a href="#cb84-34" aria-hidden="true" tabindex="-1"></a>                                                      <span class="at">n.cores =</span> <span class="cn">NULL</span>,</span>
+<span id="cb84-35"><a href="#cb84-35" aria-hidden="true" tabindex="-1"></a>                                                      <span class="at">seed =</span> <span class="cn">NULL</span>,</span>
+<span id="cb84-36"><a href="#cb84-36" aria-hidden="true" tabindex="-1"></a>                                                      <span class="at">alpha=</span><span class="cn">NULL</span>,</span>
+<span id="cb84-37"><a href="#cb84-37" aria-hidden="true" tabindex="-1"></a>                                                      <span class="at">beta =</span> <span class="cn">NULL</span>),</span>
+<span id="cb84-38"><a href="#cb84-38" aria-hidden="true" tabindex="-1"></a>                                    <span class="at">opt.control =</span> <span class="fu">list</span>(<span class="at">trace =</span> <span class="cn">NULL</span>, </span>
+<span id="cb84-39"><a href="#cb84-39" aria-hidden="true" tabindex="-1"></a>                                                        <span class="at">maxit =</span> <span class="cn">NULL</span>,</span>
+<span id="cb84-40"><a href="#cb84-40" aria-hidden="true" tabindex="-1"></a>                                                        <span class="at">optimizer =</span> <span class="cn">NA_character_</span>, </span>
+<span id="cb84-41"><a href="#cb84-41" aria-hidden="true" tabindex="-1"></a>                                                        <span class="at">n.cores =</span> <span class="cn">NULL</span>),</span>
+<span id="cb84-42"><a href="#cb84-42" aria-hidden="true" tabindex="-1"></a>                                    <span class="at">map =</span> <span class="fu">list</span>(),</span>
+<span id="cb84-43"><a href="#cb84-43" aria-hidden="true" tabindex="-1"></a>                                    <span class="at">key =</span> <span class="cn">NA_character_</span>,</span>
+<span id="cb84-44"><a href="#cb84-44" aria-hidden="true" tabindex="-1"></a>                                    <span class="at">update.gibbs =</span> <span class="fu">logical</span>())</span>
+<span id="cb84-45"><a href="#cb84-45" aria-hidden="true" tabindex="-1"></a>         )</span>
+<span id="cb84-46"><a href="#cb84-46" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb85"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb85-1"><a href="#cb85-1" aria-hidden="true" tabindex="-1"></a><span class="co">#' function to validate gibbs.control</span></span>
+<span id="cb85-2"><a href="#cb85-2" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param control a named list of parameters required to control optimization  </span></span>
+<span id="cb85-3"><a href="#cb85-3" aria-hidden="true" tabindex="-1"></a>valid.gibbs.control.Omega <span class="ot">&lt;-</span> <span class="cf">function</span>(control){</span>
+<span id="cb85-4"><a href="#cb85-4" aria-hidden="true" tabindex="-1"></a>    ctrl <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">chain.length=</span><span class="dv">1000</span>, <span class="at">burn.in=</span><span class="dv">500</span>, <span class="at">thinning=</span><span class="dv">2</span>, <span class="at">n.cores=</span><span class="dv">1</span>, <span class="at">seed=</span><span class="dv">123</span>, <span class="at">alpha=</span><span class="dv">1</span>, <span class="at">beta =</span> <span class="fl">0.4</span>)</span>
+<span id="cb85-5"><a href="#cb85-5" aria-hidden="true" tabindex="-1"></a>    namc <span class="ot">&lt;-</span> <span class="fu">names</span>(control)</span>
+<span id="cb85-6"><a href="#cb85-6" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb85-7"><a href="#cb85-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span><span class="fu">all</span>(namc <span class="sc">%in%</span> <span class="fu">names</span>(ctrl)))</span>
+<span id="cb85-8"><a href="#cb85-8" aria-hidden="true" tabindex="-1"></a>        <span class="fu">stop</span>(<span class="st">"unknown names in gibbs.control: "</span>, namc[<span class="sc">!</span>(namc <span class="sc">%in%</span> <span class="fu">names</span>(ctrl))])</span>
+<span id="cb85-9"><a href="#cb85-9" aria-hidden="true" tabindex="-1"></a>    ctrl[namc] <span class="ot">&lt;-</span> control</span>
+<span id="cb85-10"><a href="#cb85-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-11"><a href="#cb85-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(ctrl<span class="sc">$</span>alpha <span class="sc">&lt;</span><span class="dv">0</span>) <span class="fu">stop</span>(<span class="st">"alpha needs to be positive"</span>)</span>
+<span id="cb85-12"><a href="#cb85-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(ctrl<span class="sc">$</span>beta <span class="sc">&lt;</span><span class="dv">0</span>) <span class="fu">stop</span>(<span class="st">"beta needs to be positive"</span>)</span>
+<span id="cb85-13"><a href="#cb85-13" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb85-14"><a href="#cb85-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(ctrl)</span>
+<span id="cb85-15"><a href="#cb85-15" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb86"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb86-1"><a href="#cb86-1" aria-hidden="true" tabindex="-1"></a><span class="co">#' main function to run deconvolution using BayesPrism</span></span>
+<span id="cb86-2"><a href="#cb86-2" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param n.cores number of cores to use. Default =1.</span></span>
+<span id="cb86-3"><a href="#cb86-3" aria-hidden="true" tabindex="-1"></a><span class="co">#'      If needs to set different number of cores for Gibbs sampling and optimization,</span></span>
+<span id="cb86-4"><a href="#cb86-4" aria-hidden="true" tabindex="-1"></a><span class="co">#'      supply n.cores in gibbs.control and/or opt.control</span></span>
+<span id="cb86-5"><a href="#cb86-5" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param update.gibbs a logical variable to denote whether run final Gibbs sampling to update theta</span></span>
+<span id="cb86-6"><a href="#cb86-6" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param gibbs.control a list containing parameters of the Gibbs sampler</span></span>
+<span id="cb86-7"><a href="#cb86-7" aria-hidden="true" tabindex="-1"></a><span class="co">#'      chain.length: length of MCMC chain. Default=1000;</span></span>
+<span id="cb86-8"><a href="#cb86-8" aria-hidden="true" tabindex="-1"></a><span class="co">#'      burn.in: length of burn in period. Default=500;</span></span>
+<span id="cb86-9"><a href="#cb86-9" aria-hidden="true" tabindex="-1"></a><span class="co">#'      thinning: retain every # of MCMC samples after the burn in period to reduce auto-correlation. Default=2;</span></span>
+<span id="cb86-10"><a href="#cb86-10" aria-hidden="true" tabindex="-1"></a><span class="co">#'      n.cores: number of cores to use. Default uses n.cores in the main argument.</span></span>
+<span id="cb86-11"><a href="#cb86-11" aria-hidden="true" tabindex="-1"></a><span class="co">#'      seed: seed number to use for repoducibility. Default = 123. set to NULL if use pseudo random.</span></span>
+<span id="cb86-12"><a href="#cb86-12" aria-hidden="true" tabindex="-1"></a><span class="co">#'      alpha: a numeric vector to represent the parameter of dirichlet distribution. Default=1. (1E-8 may yield theta=0 due to underflow. causes issue when psuedo.min=0) </span></span>
+<span id="cb86-13"><a href="#cb86-13" aria-hidden="true" tabindex="-1"></a><span class="co">#'      beta: a numeric vector to represent the strength of the interatcion term</span></span>
+<span id="cb86-14"><a href="#cb86-14" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param opt.control a list containing parameters for the optimization step:</span></span>
+<span id="cb86-15"><a href="#cb86-15" aria-hidden="true" tabindex="-1"></a><span class="co">#'      maxit: maximum number of cycles to interate. Default=100000</span></span>
+<span id="cb86-16"><a href="#cb86-16" aria-hidden="true" tabindex="-1"></a><span class="co">#'      sigma: hyper-parameter of the prior if optimizer="MAP". Default=2.</span></span>
+<span id="cb86-17"><a href="#cb86-17" aria-hidden="true" tabindex="-1"></a><span class="co">#'      optimizer a character string to denote which algorithm to use</span></span>
+<span id="cb86-18"><a href="#cb86-18" aria-hidden="true" tabindex="-1"></a><span class="co">#'          "MAP": the one used by the BayesPrism paper, with cell type-specific gamma under a log-normal prior </span></span>
+<span id="cb86-19"><a href="#cb86-19" aria-hidden="true" tabindex="-1"></a><span class="co">#'          "MLE": the new algorithm that models a single gamma across cell types. Useful when some cell types are low in Z_k, e.g. spatial data</span></span>
+<span id="cb86-20"><a href="#cb86-20" aria-hidden="true" tabindex="-1"></a><span class="co">#'          default to "MAP"</span></span>
+<span id="cb86-21"><a href="#cb86-21" aria-hidden="true" tabindex="-1"></a><span class="co">#' @export</span></span>
+<span id="cb86-22"><a href="#cb86-22" aria-hidden="true" tabindex="-1"></a>run.prism.Omega <span class="ot">&lt;-</span> <span class="cf">function</span>(prism,</span>
+<span id="cb86-23"><a href="#cb86-23" aria-hidden="true" tabindex="-1"></a>                            Omega,</span>
+<span id="cb86-24"><a href="#cb86-24" aria-hidden="true" tabindex="-1"></a>                            <span class="at">n.cores=</span><span class="dv">1</span>,</span>
+<span id="cb86-25"><a href="#cb86-25" aria-hidden="true" tabindex="-1"></a>                            <span class="at">update.gibbs=</span><span class="cn">TRUE</span>,</span>
+<span id="cb86-26"><a href="#cb86-26" aria-hidden="true" tabindex="-1"></a>                            <span class="at">gibbs.control=</span><span class="fu">list</span>(),</span>
+<span id="cb86-27"><a href="#cb86-27" aria-hidden="true" tabindex="-1"></a>                            <span class="at">opt.control=</span><span class="fu">list</span>()</span>
+<span id="cb86-28"><a href="#cb86-28" aria-hidden="true" tabindex="-1"></a>                            ){</span>
+<span id="cb86-29"><a href="#cb86-29" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb86-30"><a href="#cb86-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(<span class="sc">!</span> <span class="st">"n.cores"</span> <span class="sc">%in%</span> <span class="fu">names</span>(gibbs.control)) gibbs.control<span class="sc">$</span>n.cores <span class="ot">&lt;-</span> n.cores</span>
+<span id="cb86-31"><a href="#cb86-31" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(<span class="sc">!</span> <span class="st">"n.cores"</span> <span class="sc">%in%</span> <span class="fu">names</span>(opt.control)) opt.control<span class="sc">$</span>n.cores <span class="ot">&lt;-</span> n.cores</span>
+<span id="cb86-32"><a href="#cb86-32" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stopifnot</span>(<span class="fu">is.logical</span>(update.gibbs) <span class="sc">&amp;</span> <span class="fu">length</span>(update.gibbs)<span class="sc">==</span><span class="dv">1</span>)</span>
+<span id="cb86-33"><a href="#cb86-33" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stopifnot</span>(<span class="fu">is.numeric</span>(n.cores) <span class="sc">&amp;</span> <span class="fu">length</span>(n.cores)<span class="sc">==</span><span class="dv">1</span>)</span>
+<span id="cb86-34"><a href="#cb86-34" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb86-35"><a href="#cb86-35" aria-hidden="true" tabindex="-1"></a>    opt.control <span class="ot">&lt;-</span> <span class="fu">valid.opt.control</span>(opt.control)</span>
+<span id="cb86-36"><a href="#cb86-36" aria-hidden="true" tabindex="-1"></a>    gibbs.control <span class="ot">&lt;-</span> <span class="fu">valid.gibbs.control.Omega</span>(gibbs.control)</span>
+<span id="cb86-37"><a href="#cb86-37" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb86-38"><a href="#cb86-38" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(prism<span class="sc">@</span>phi_cellState<span class="sc">@</span>pseudo.min<span class="sc">==</span><span class="dv">0</span>) </span>
+<span id="cb86-39"><a href="#cb86-39" aria-hidden="true" tabindex="-1"></a>        gibbs.control<span class="sc">$</span>alpha <span class="ot">&lt;-</span> <span class="fu">max</span>(<span class="dv">1</span>, gibbs.control<span class="sc">$</span>alpha)</span>
+<span id="cb86-40"><a href="#cb86-40" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb86-41"><a href="#cb86-41" aria-hidden="true" tabindex="-1"></a>    <span class="co">#write mixture to disk and load each X_n to the corresponding node to save memory</span></span>
+<span id="cb86-42"><a href="#cb86-42" aria-hidden="true" tabindex="-1"></a>    tmp.dir <span class="ot">&lt;-</span> <span class="fu">tempdir</span>(<span class="at">check=</span><span class="cn">TRUE</span>)</span>
+<span id="cb86-43"><a href="#cb86-43" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span>(n <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(prism<span class="sc">@</span>mixture)) {</span>
+<span id="cb86-44"><a href="#cb86-44" aria-hidden="true" tabindex="-1"></a>        X_n <span class="ot">&lt;-</span> prism<span class="sc">@</span>mixture[n,]</span>
+<span id="cb86-45"><a href="#cb86-45" aria-hidden="true" tabindex="-1"></a>        file.name <span class="ot">&lt;-</span> <span class="fu">paste</span>(tmp.dir, <span class="st">"/mixture_"</span>,n,<span class="st">".rdata"</span>,<span class="at">sep=</span><span class="st">""</span>)</span>
+<span id="cb86-46"><a href="#cb86-46" aria-hidden="true" tabindex="-1"></a>        <span class="fu">save</span>(X_n, <span class="at">file=</span> file.name)</span>
+<span id="cb86-47"><a href="#cb86-47" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb86-48"><a href="#cb86-48" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb86-49"><a href="#cb86-49" aria-hidden="true" tabindex="-1"></a>    <span class="co">#sampling cell states (cs)</span></span>
+<span id="cb86-50"><a href="#cb86-50" aria-hidden="true" tabindex="-1"></a>    gibbsSampler.ini.cs <span class="ot">&lt;-</span> <span class="fu">new</span>(<span class="st">"gibbsSamplerOmega"</span>,</span>
+<span id="cb86-51"><a href="#cb86-51" aria-hidden="true" tabindex="-1"></a>                                <span class="at">reference =</span> prism<span class="sc">@</span>phi_cellState,</span>
+<span id="cb86-52"><a href="#cb86-52" aria-hidden="true" tabindex="-1"></a>                                <span class="at">X =</span> prism<span class="sc">@</span>mixture,</span>
+<span id="cb86-53"><a href="#cb86-53" aria-hidden="true" tabindex="-1"></a>                                <span class="at">Omega =</span> Omega,</span>
+<span id="cb86-54"><a href="#cb86-54" aria-hidden="true" tabindex="-1"></a>                                <span class="at">gibbs.control =</span> gibbs.control)</span>
+<span id="cb86-55"><a href="#cb86-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-56"><a href="#cb86-56" aria-hidden="true" tabindex="-1"></a>    jointPost.ini.cs <span class="ot">&lt;-</span> <span class="fu">run.gibbs.Omega</span>(gibbsSampler.ini.cs, Omega,</span>
+<span id="cb86-57"><a href="#cb86-57" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">final=</span><span class="cn">FALSE</span>)</span>
+<span id="cb86-58"><a href="#cb86-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-59"><a href="#cb86-59" aria-hidden="true" tabindex="-1"></a>    <span class="co">#merge over cell states to get cell type (ct) info</span></span>
+<span id="cb86-60"><a href="#cb86-60" aria-hidden="true" tabindex="-1"></a>    jointPost.ini.ct <span class="ot">&lt;-</span> <span class="fu">mergeK</span>(<span class="at">jointPost.obj =</span> jointPost.ini.cs, </span>
+<span id="cb86-61"><a href="#cb86-61" aria-hidden="true" tabindex="-1"></a>                                         <span class="at">map =</span> prism<span class="sc">@</span>map)</span>
+<span id="cb86-62"><a href="#cb86-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb86-63"><a href="#cb86-63" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(<span class="sc">!</span>update.gibbs) <span class="co">#only do initial Gibbs sampling</span></span>
+<span id="cb86-64"><a href="#cb86-64" aria-hidden="true" tabindex="-1"></a>        bp.obj <span class="ot">&lt;-</span> <span class="fu">new</span>(<span class="st">"BayesPrismOmega"</span>,</span>
+<span id="cb86-65"><a href="#cb86-65" aria-hidden="true" tabindex="-1"></a>                      <span class="at">prism =</span> prism,</span>
+<span id="cb86-66"><a href="#cb86-66" aria-hidden="true" tabindex="-1"></a>                      <span class="at">Omega =</span> Omega,</span>
+<span id="cb86-67"><a href="#cb86-67" aria-hidden="true" tabindex="-1"></a>                      <span class="at">posterior.initial.cellState =</span> jointPost.ini.cs,</span>
+<span id="cb86-68"><a href="#cb86-68" aria-hidden="true" tabindex="-1"></a>                      <span class="at">posterior.initial.cellType =</span> jointPost.ini.ct,</span>
+<span id="cb86-69"><a href="#cb86-69" aria-hidden="true" tabindex="-1"></a>                      <span class="at">control_param =</span> <span class="fu">list</span>(<span class="at">gibbs.control =</span> gibbs.control, </span>
+<span id="cb86-70"><a href="#cb86-70" aria-hidden="true" tabindex="-1"></a>                                           <span class="at">opt.control =</span> opt.control,</span>
+<span id="cb86-71"><a href="#cb86-71" aria-hidden="true" tabindex="-1"></a>                                           <span class="at">update.gibbs =</span> update.gibbs)</span>
+<span id="cb86-72"><a href="#cb86-72" aria-hidden="true" tabindex="-1"></a>                      )</span>
+<span id="cb86-73"><a href="#cb86-73" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>{</span>
+<span id="cb86-74"><a href="#cb86-74" aria-hidden="true" tabindex="-1"></a>        <span class="co">#contruct the new gibbsSampler object with updated reference</span></span>
+<span id="cb86-75"><a href="#cb86-75" aria-hidden="true" tabindex="-1"></a>        psi <span class="ot">&lt;-</span> <span class="fu">updateReference</span> (<span class="at">Z =</span> jointPost.ini.ct<span class="sc">@</span>Z,</span>
+<span id="cb86-76"><a href="#cb86-76" aria-hidden="true" tabindex="-1"></a>                                <span class="at">phi_prime =</span> prism<span class="sc">@</span>phi_cellType,</span>
+<span id="cb86-77"><a href="#cb86-77" aria-hidden="true" tabindex="-1"></a>                                <span class="at">map =</span> prism<span class="sc">@</span>map,</span>
+<span id="cb86-78"><a href="#cb86-78" aria-hidden="true" tabindex="-1"></a>                                <span class="at">key =</span> prism<span class="sc">@</span>key,</span>
+<span id="cb86-79"><a href="#cb86-79" aria-hidden="true" tabindex="-1"></a>                                <span class="at">opt.control =</span> opt.control)</span>
+<span id="cb86-80"><a href="#cb86-80" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb86-81"><a href="#cb86-81" aria-hidden="true" tabindex="-1"></a>        gibbsSampler.update <span class="ot">&lt;-</span> <span class="fu">new</span>(<span class="st">"gibbsSampler"</span>,</span>
+<span id="cb86-82"><a href="#cb86-82" aria-hidden="true" tabindex="-1"></a>                                    <span class="at">reference =</span> psi,</span>
+<span id="cb86-83"><a href="#cb86-83" aria-hidden="true" tabindex="-1"></a>                                    <span class="at">X =</span> prism<span class="sc">@</span>mixture,</span>
+<span id="cb86-84"><a href="#cb86-84" aria-hidden="true" tabindex="-1"></a>                                    <span class="at">gibbs.control =</span> gibbs.control)</span>
+<span id="cb86-85"><a href="#cb86-85" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb86-86"><a href="#cb86-86" aria-hidden="true" tabindex="-1"></a>        theta_f <span class="ot">&lt;-</span> <span class="fu">run.gibbs</span>(gibbsSampler.update, </span>
+<span id="cb86-87"><a href="#cb86-87" aria-hidden="true" tabindex="-1"></a>                             <span class="at">final=</span><span class="cn">TRUE</span>)</span>
+<span id="cb86-88"><a href="#cb86-88" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb86-89"><a href="#cb86-89" aria-hidden="true" tabindex="-1"></a>        bp.obj <span class="ot">&lt;-</span> <span class="fu">new</span>(<span class="st">"BayesPrismOmega"</span>,</span>
+<span id="cb86-90"><a href="#cb86-90" aria-hidden="true" tabindex="-1"></a>                      <span class="at">prism =</span> prism,</span>
+<span id="cb86-91"><a href="#cb86-91" aria-hidden="true" tabindex="-1"></a>                      <span class="at">Omega =</span> Omega,</span>
+<span id="cb86-92"><a href="#cb86-92" aria-hidden="true" tabindex="-1"></a>                      <span class="at">posterior.initial.cellState =</span> jointPost.ini.cs,</span>
+<span id="cb86-93"><a href="#cb86-93" aria-hidden="true" tabindex="-1"></a>                      <span class="at">posterior.initial.cellType =</span> jointPost.ini.ct,</span>
+<span id="cb86-94"><a href="#cb86-94" aria-hidden="true" tabindex="-1"></a>                      <span class="at">reference.update =</span> psi,</span>
+<span id="cb86-95"><a href="#cb86-95" aria-hidden="true" tabindex="-1"></a>                      <span class="at">posterior.theta_f =</span> theta_f,</span>
+<span id="cb86-96"><a href="#cb86-96" aria-hidden="true" tabindex="-1"></a>                      <span class="at">control_param =</span> <span class="fu">list</span>(<span class="at">gibbs.control =</span> gibbs.control, </span>
+<span id="cb86-97"><a href="#cb86-97" aria-hidden="true" tabindex="-1"></a>                                           <span class="at">opt.control =</span> opt.control,</span>
+<span id="cb86-98"><a href="#cb86-98" aria-hidden="true" tabindex="-1"></a>                                           <span class="at">update.gibbs =</span> update.gibbs)</span>
+<span id="cb86-99"><a href="#cb86-99" aria-hidden="true" tabindex="-1"></a>                     )</span>
+<span id="cb86-100"><a href="#cb86-100" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb86-101"><a href="#cb86-101" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb86-102"><a href="#cb86-102" aria-hidden="true" tabindex="-1"></a>    <span class="fu">unlink</span>(tmp.dir, <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb86-103"><a href="#cb86-103" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb86-104"><a href="#cb86-104" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(bp.obj)      </span>
+<span id="cb86-105"><a href="#cb86-105" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb87"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb87-1"><a href="#cb87-1" aria-hidden="true" tabindex="-1"></a><span class="co">#‘ function used to estimate run time of Gibbs sampling (print to console)</span></span>
+<span id="cb87-2"><a href="#cb87-2" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param gibbsSampler.obj a gibbsSampler object</span></span>
+<span id="cb87-3"><a href="#cb87-3" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param final a logical variable denote whether report only updated theta_f (final =TRUE)</span></span>
+<span id="cb87-4"><a href="#cb87-4" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param chain.length length of MCMC chain used to simulate. Default=50.</span></span>
+<span id="cb87-5"><a href="#cb87-5" aria-hidden="true" tabindex="-1"></a>estimate.gibbs.time.Omega <span class="ot">&lt;-</span> <span class="cf">function</span>(gibbsSampler.obj,</span>
+<span id="cb87-6"><a href="#cb87-6" aria-hidden="true" tabindex="-1"></a>                                final, </span>
+<span id="cb87-7"><a href="#cb87-7" aria-hidden="true" tabindex="-1"></a>                                <span class="at">chain.length=</span><span class="dv">50</span>){</span>
+<span id="cb87-8"><a href="#cb87-8" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb87-9"><a href="#cb87-9" aria-hidden="true" tabindex="-1"></a>    ref <span class="ot">&lt;-</span> gibbsSampler.obj<span class="sc">@</span>reference</span>
+<span id="cb87-10"><a href="#cb87-10" aria-hidden="true" tabindex="-1"></a>    X <span class="ot">&lt;-</span> gibbsSampler.obj<span class="sc">@</span>X</span>
+<span id="cb87-11"><a href="#cb87-11" aria-hidden="true" tabindex="-1"></a>    gibbs.control <span class="ot">&lt;-</span> gibbsSampler.obj<span class="sc">@</span>gibbs.control</span>
+<span id="cb87-12"><a href="#cb87-12" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb87-13"><a href="#cb87-13" aria-hidden="true" tabindex="-1"></a>    ptm <span class="ot">&lt;-</span> <span class="fu">proc.time</span>()</span>
+<span id="cb87-14"><a href="#cb87-14" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb87-15"><a href="#cb87-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(<span class="sc">!</span>final){</span>
+<span id="cb87-16"><a href="#cb87-16" aria-hidden="true" tabindex="-1"></a>        <span class="co">#initial Gibbs</span></span>
+<span id="cb87-17"><a href="#cb87-17" aria-hidden="true" tabindex="-1"></a>        <span class="fu">sample.Z.theta_n.Omega</span> (<span class="at">X_n =</span> X[<span class="dv">1</span>,], </span>
+<span id="cb87-18"><a href="#cb87-18" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">phi =</span> ref<span class="sc">@</span>phi, </span>
+<span id="cb87-19"><a href="#cb87-19" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">alpha =</span> gibbs.control<span class="sc">$</span>alpha,</span>
+<span id="cb87-20"><a href="#cb87-20" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">Omega =</span> gibbsSampler.obj<span class="sc">@</span>Omega,</span>
+<span id="cb87-21"><a href="#cb87-21" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">beta =</span> gibbs.control<span class="sc">$</span>beta,</span>
+<span id="cb87-22"><a href="#cb87-22" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">gibbs.idx =</span> <span class="fu">get.gibbs.idx</span>(</span>
+<span id="cb87-23"><a href="#cb87-23" aria-hidden="true" tabindex="-1"></a>                                    <span class="fu">list</span>(<span class="at">chain.length =</span> chain.length, </span>
+<span id="cb87-24"><a href="#cb87-24" aria-hidden="true" tabindex="-1"></a>                                         <span class="at">burn.in =</span> chain.length<span class="sc">*</span>gibbs.control<span class="sc">$</span>burn.in<span class="sc">/</span>gibbs.control<span class="sc">$</span>chain.length,</span>
+<span id="cb87-25"><a href="#cb87-25" aria-hidden="true" tabindex="-1"></a>                                         <span class="at">thinning =</span> gibbs.control<span class="sc">$</span>thinning)</span>
+<span id="cb87-26"><a href="#cb87-26" aria-hidden="true" tabindex="-1"></a>                                  )</span>
+<span id="cb87-27"><a href="#cb87-27" aria-hidden="true" tabindex="-1"></a>                           )</span>
+<span id="cb87-28"><a href="#cb87-28" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb87-29"><a href="#cb87-29" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>{</span>
+<span id="cb87-30"><a href="#cb87-30" aria-hidden="true" tabindex="-1"></a>        <span class="co">#updated Gibbs</span></span>
+<span id="cb87-31"><a href="#cb87-31" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span>(<span class="fu">is</span>(ref,<span class="st">"refPhi"</span>)){</span>
+<span id="cb87-32"><a href="#cb87-32" aria-hidden="true" tabindex="-1"></a>            <span class="fu">sample.theta_n</span> (<span class="at">X_n =</span> X[<span class="dv">1</span>,], </span>
+<span id="cb87-33"><a href="#cb87-33" aria-hidden="true" tabindex="-1"></a>                            <span class="at">phi =</span> ref<span class="sc">@</span>phi, </span>
+<span id="cb87-34"><a href="#cb87-34" aria-hidden="true" tabindex="-1"></a>                            <span class="at">alpha =</span> gibbs.control<span class="sc">$</span>alpha,</span>
+<span id="cb87-35"><a href="#cb87-35" aria-hidden="true" tabindex="-1"></a>                            <span class="at">gibbs.idx =</span> <span class="fu">get.gibbs.idx</span>(</span>
+<span id="cb87-36"><a href="#cb87-36" aria-hidden="true" tabindex="-1"></a>                                <span class="fu">list</span>(<span class="at">chain.length =</span> chain.length, </span>
+<span id="cb87-37"><a href="#cb87-37" aria-hidden="true" tabindex="-1"></a>                                    <span class="at">burn.in =</span> chain.length<span class="sc">*</span>gibbs.control<span class="sc">$</span>burn.in<span class="sc">/</span>gibbs.control<span class="sc">$</span>chain.length,</span>
+<span id="cb87-38"><a href="#cb87-38" aria-hidden="true" tabindex="-1"></a>                                    <span class="at">thinning =</span> gibbs.control<span class="sc">$</span>thinning)</span>
+<span id="cb87-39"><a href="#cb87-39" aria-hidden="true" tabindex="-1"></a>                                 )</span>
+<span id="cb87-40"><a href="#cb87-40" aria-hidden="true" tabindex="-1"></a>                                )</span>
+<span id="cb87-41"><a href="#cb87-41" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb87-42"><a href="#cb87-42" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span>(<span class="fu">is</span>(ref,<span class="st">"refTumor"</span>)){</span>
+<span id="cb87-43"><a href="#cb87-43" aria-hidden="true" tabindex="-1"></a>            phi_1 <span class="ot">&lt;-</span> <span class="fu">rbind</span>(ref<span class="sc">@</span>psi_mal[<span class="dv">1</span>,], ref<span class="sc">@</span>psi_env)</span>
+<span id="cb87-44"><a href="#cb87-44" aria-hidden="true" tabindex="-1"></a>            nonzero.idx <span class="ot">&lt;-</span> <span class="fu">apply</span>(phi_1,<span class="dv">2</span>,max)<span class="sc">&gt;</span><span class="dv">0</span></span>
+<span id="cb87-45"><a href="#cb87-45" aria-hidden="true" tabindex="-1"></a>            <span class="fu">sample.theta_n</span> (<span class="at">X_n =</span> X[<span class="dv">1</span>,nonzero.idx, <span class="at">drop=</span>F], </span>
+<span id="cb87-46"><a href="#cb87-46" aria-hidden="true" tabindex="-1"></a>                            <span class="at">phi =</span> phi_1[, nonzero.idx, <span class="at">drop=</span>F], </span>
+<span id="cb87-47"><a href="#cb87-47" aria-hidden="true" tabindex="-1"></a>                            <span class="at">alpha =</span> gibbs.control<span class="sc">$</span>alpha,</span>
+<span id="cb87-48"><a href="#cb87-48" aria-hidden="true" tabindex="-1"></a>                            <span class="at">gibbs.idx =</span> <span class="fu">get.gibbs.idx</span>(</span>
+<span id="cb87-49"><a href="#cb87-49" aria-hidden="true" tabindex="-1"></a>                                <span class="fu">list</span>(<span class="at">chain.length =</span> chain.length, </span>
+<span id="cb87-50"><a href="#cb87-50" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">burn.in =</span> chain.length<span class="sc">*</span>gibbs.control<span class="sc">$</span>burn.in<span class="sc">/</span>gibbs.control<span class="sc">$</span>chain.length,</span>
+<span id="cb87-51"><a href="#cb87-51" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">thinning =</span> gibbs.control<span class="sc">$</span>thinning)</span>
+<span id="cb87-52"><a href="#cb87-52" aria-hidden="true" tabindex="-1"></a>                                )</span>
+<span id="cb87-53"><a href="#cb87-53" aria-hidden="true" tabindex="-1"></a>                                )   </span>
+<span id="cb87-54"><a href="#cb87-54" aria-hidden="true" tabindex="-1"></a>        }   </span>
+<span id="cb87-55"><a href="#cb87-55" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb87-56"><a href="#cb87-56" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb87-57"><a href="#cb87-57" aria-hidden="true" tabindex="-1"></a>    total.time <span class="ot">&lt;-</span> <span class="fu">proc.time</span>() <span class="sc">-</span> ptm</span>
+<span id="cb87-58"><a href="#cb87-58" aria-hidden="true" tabindex="-1"></a>    total.time <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(total.time[<span class="st">"elapsed"</span>])</span>
+<span id="cb87-59"><a href="#cb87-59" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb87-60"><a href="#cb87-60" aria-hidden="true" tabindex="-1"></a>    <span class="co"># seems to underestimate when transferring data comsumes large amount of time (spatial data)</span></span>
+<span id="cb87-61"><a href="#cb87-61" aria-hidden="true" tabindex="-1"></a>    estimated.time <span class="ot">&lt;-</span> gibbs.control <span class="sc">$</span>chain.length <span class="sc">/</span> chain.length <span class="sc">*</span> total.time <span class="sc">*</span> <span class="fu">ceiling</span>(<span class="fu">nrow</span>(X) <span class="sc">/</span> gibbs.control<span class="sc">$</span>n.cores) <span class="sc">*</span><span class="dv">2</span>         </span>
+<span id="cb87-62"><a href="#cb87-62" aria-hidden="true" tabindex="-1"></a>    current.time <span class="ot">&lt;-</span> <span class="fu">Sys.time</span>()</span>
+<span id="cb87-63"><a href="#cb87-63" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb87-64"><a href="#cb87-64" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cat</span>(<span class="st">"Current time: "</span>, <span class="fu">as.character</span>(current.time), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb87-65"><a href="#cb87-65" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cat</span>(<span class="st">"Estimated time to complete: "</span>, <span class="fu">my_seconds_to_period</span>(estimated.time), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb87-66"><a href="#cb87-66" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cat</span>(<span class="st">"Estimated finishing time: "</span>, <span class="fu">as.character</span>(current.time <span class="sc">+</span> estimated.time), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb87-67"><a href="#cb87-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb87-68"><a href="#cb87-68" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb88"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb88-1"><a href="#cb88-1" aria-hidden="true" tabindex="-1"></a><span class="co">#' function to run Gibbs sampling </span></span>
+<span id="cb88-2"><a href="#cb88-2" aria-hidden="true" tabindex="-1"></a><span class="co">#'</span></span>
+<span id="cb88-3"><a href="#cb88-3" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param gibbsSampler.obj, a gibbsSampler object</span></span>
+<span id="cb88-4"><a href="#cb88-4" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param final a logical variable denote whether report only updated theta_f (final=TRUE)</span></span>
+<span id="cb88-5"><a href="#cb88-5" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param if.estimate a logical variable denote whether estimate the run time. Default=TRUE</span></span>
+<span id="cb88-6"><a href="#cb88-6" aria-hidden="true" tabindex="-1"></a><span class="co">#' @import snowfall</span></span>
+<span id="cb88-7"><a href="#cb88-7" aria-hidden="true" tabindex="-1"></a><span class="co">#' @return a gibbsSampler object with Z and theta entries, if final=FALSE,  or theta_f matrix if final=TRUE</span></span>
+<span id="cb88-8"><a href="#cb88-8" aria-hidden="true" tabindex="-1"></a>run.gibbs.Omega <span class="ot">&lt;-</span> <span class="cf">function</span>(gibbsSampler.obj, </span>
+<span id="cb88-9"><a href="#cb88-9" aria-hidden="true" tabindex="-1"></a>                            Omega,</span>
+<span id="cb88-10"><a href="#cb88-10" aria-hidden="true" tabindex="-1"></a>                            final,</span>
+<span id="cb88-11"><a href="#cb88-11" aria-hidden="true" tabindex="-1"></a>                            <span class="at">if.estimate=</span><span class="cn">TRUE</span>,</span>
+<span id="cb88-12"><a href="#cb88-12" aria-hidden="true" tabindex="-1"></a>                            <span class="at">compute.elbo=</span><span class="cn">FALSE</span></span>
+<span id="cb88-13"><a href="#cb88-13" aria-hidden="true" tabindex="-1"></a>                            ){</span>
+<span id="cb88-14"><a href="#cb88-14" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb88-15"><a href="#cb88-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(final) <span class="fu">cat</span>(<span class="st">"Run Gibbs sampling using updated reference ... </span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb88-16"><a href="#cb88-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span> <span class="fu">cat</span>(<span class="st">"Run Gibbs sampling... </span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb88-17"><a href="#cb88-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb88-18"><a href="#cb88-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(if.estimate)</span>
+<span id="cb88-19"><a href="#cb88-19" aria-hidden="true" tabindex="-1"></a>        <span class="fu">estimate.gibbs.time.Omega</span>(<span class="at">gibbsSampler.obj =</span> gibbsSampler.obj, </span>
+<span id="cb88-20"><a href="#cb88-20" aria-hidden="true" tabindex="-1"></a>                            <span class="at">final =</span> final)</span>
+<span id="cb88-21"><a href="#cb88-21" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb88-22"><a href="#cb88-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(<span class="fu">is</span>(gibbsSampler.obj<span class="sc">@</span>reference,<span class="st">"refPhi"</span>)) {</span>
+<span id="cb88-23"><a href="#cb88-23" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span>(<span class="sc">!</span>final) <span class="fu">return</span>(<span class="fu">run.gibbs.refPhi.ini.Omega</span>(<span class="at">gibbsSampler.obj =</span> gibbsSampler.obj, </span>
+<span id="cb88-24"><a href="#cb88-24" aria-hidden="true" tabindex="-1"></a>                                                     <span class="at">Omega =</span> Omega,</span>
+<span id="cb88-25"><a href="#cb88-25" aria-hidden="true" tabindex="-1"></a>                                                     <span class="at">compute.elbo =</span> compute.elbo))</span>
+<span id="cb88-26"><a href="#cb88-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span> <span class="fu">return</span>(<span class="fu">run.gibbs.refPhi.final</span>(<span class="at">gibbsSampler.obj =</span> gibbsSampler.obj, </span>
+<span id="cb88-27"><a href="#cb88-27" aria-hidden="true" tabindex="-1"></a>                                           <span class="at">compute.elbo =</span> compute.elbo))</span>
+<span id="cb88-28"><a href="#cb88-28" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb88-29"><a href="#cb88-29" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(<span class="fu">is</span>(gibbsSampler.obj<span class="sc">@</span>reference,<span class="st">"refTumor"</span>)) {</span>
+<span id="cb88-30"><a href="#cb88-30" aria-hidden="true" tabindex="-1"></a>        <span class="fu">return</span>(<span class="fu">run.gibbs.refTumor</span>(<span class="at">gibbsSampler.obj =</span> gibbsSampler.obj)) </span>
+<span id="cb88-31"><a href="#cb88-31" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb88-32"><a href="#cb88-32" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb89"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb89-1"><a href="#cb89-1" aria-hidden="true" tabindex="-1"></a><span class="co">#' function to run initial Gibbs sampling if reference is of the class refPhi</span></span>
+<span id="cb89-2"><a href="#cb89-2" aria-hidden="true" tabindex="-1"></a><span class="co">#'</span></span>
+<span id="cb89-3"><a href="#cb89-3" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param gibbsSampler.obj, a gibbsSampler object</span></span>
+<span id="cb89-4"><a href="#cb89-4" aria-hidden="true" tabindex="-1"></a><span class="co">#' @import snowfall</span></span>
+<span id="cb89-5"><a href="#cb89-5" aria-hidden="true" tabindex="-1"></a><span class="co">#' @return a jointPost object with Z and theta entries </span></span>
+<span id="cb89-6"><a href="#cb89-6" aria-hidden="true" tabindex="-1"></a>run.gibbs.refPhi.ini.Omega <span class="ot">&lt;-</span> <span class="cf">function</span>(gibbsSampler.obj,</span>
+<span id="cb89-7"><a href="#cb89-7" aria-hidden="true" tabindex="-1"></a>                                       Omega,</span>
+<span id="cb89-8"><a href="#cb89-8" aria-hidden="true" tabindex="-1"></a>                                       compute.elbo){</span>
+<span id="cb89-9"><a href="#cb89-9" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb89-10"><a href="#cb89-10" aria-hidden="true" tabindex="-1"></a>    phi <span class="ot">&lt;-</span> gibbsSampler.obj<span class="sc">@</span>reference<span class="sc">@</span>phi</span>
+<span id="cb89-11"><a href="#cb89-11" aria-hidden="true" tabindex="-1"></a>    X <span class="ot">&lt;-</span> gibbsSampler.obj<span class="sc">@</span>X</span>
+<span id="cb89-12"><a href="#cb89-12" aria-hidden="true" tabindex="-1"></a>    gibbs.control <span class="ot">&lt;-</span> gibbsSampler.obj<span class="sc">@</span>gibbs.control</span>
+<span id="cb89-13"><a href="#cb89-13" aria-hidden="true" tabindex="-1"></a>    alpha <span class="ot">&lt;-</span> gibbs.control<span class="sc">$</span>alpha</span>
+<span id="cb89-14"><a href="#cb89-14" aria-hidden="true" tabindex="-1"></a>    beta <span class="ot">&lt;-</span> gibbs.control<span class="sc">$</span>beta</span>
+<span id="cb89-15"><a href="#cb89-15" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb89-16"><a href="#cb89-16" aria-hidden="true" tabindex="-1"></a>    gibbs.idx <span class="ot">&lt;-</span> <span class="fu">get.gibbs.idx</span>(gibbs.control)</span>
+<span id="cb89-17"><a href="#cb89-17" aria-hidden="true" tabindex="-1"></a>    seed <span class="ot">&lt;-</span> gibbs.control<span class="sc">$</span>seed</span>
+<span id="cb89-18"><a href="#cb89-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb89-19"><a href="#cb89-19" aria-hidden="true" tabindex="-1"></a>    <span class="do">##### LOOK INTO THESE</span></span>
+<span id="cb89-20"><a href="#cb89-20" aria-hidden="true" tabindex="-1"></a>    sample.Z.theta_n.Omega <span class="ot">&lt;-</span> sample.Z.theta_n.Omega</span>
+<span id="cb89-21"><a href="#cb89-21" aria-hidden="true" tabindex="-1"></a>    rdirichlet <span class="ot">&lt;-</span> BayesPrism<span class="sc">:::</span>rdirichlet</span>
+<span id="cb89-22"><a href="#cb89-22" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb89-23"><a href="#cb89-23" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cat</span>(<span class="st">"Start run... </span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb89-24"><a href="#cb89-24" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb89-25"><a href="#cb89-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(gibbs.control<span class="sc">$</span>n.cores<span class="sc">&gt;</span><span class="dv">1</span>){    </span>
+<span id="cb89-26"><a href="#cb89-26" aria-hidden="true" tabindex="-1"></a>        <span class="co">#parallel using snowfall    </span></span>
+<span id="cb89-27"><a href="#cb89-27" aria-hidden="true" tabindex="-1"></a>        <span class="fu">sfInit</span>(<span class="at">parallel =</span> <span class="cn">TRUE</span>, <span class="at">cpus =</span> gibbs.control<span class="sc">$</span>n.cores, <span class="at">type =</span> <span class="st">"SOCK"</span> )</span>
+<span id="cb89-28"><a href="#cb89-28" aria-hidden="true" tabindex="-1"></a>                    </span>
+<span id="cb89-29"><a href="#cb89-29" aria-hidden="true" tabindex="-1"></a>        cpu.fun <span class="ot">&lt;-</span> <span class="cf">function</span>(n) {</span>
+<span id="cb89-30"><a href="#cb89-30" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span>(<span class="sc">!</span><span class="fu">is.null</span>(seed)) <span class="fu">set.seed</span>(seed)</span>
+<span id="cb89-31"><a href="#cb89-31" aria-hidden="true" tabindex="-1"></a>            <span class="co">#load nth mixture from disk</span></span>
+<span id="cb89-32"><a href="#cb89-32" aria-hidden="true" tabindex="-1"></a>            file.name.X_n <span class="ot">&lt;-</span> <span class="fu">paste</span>(tmp.dir, <span class="st">"/mixture_"</span>,n,<span class="st">".rdata"</span>,<span class="at">sep=</span><span class="st">""</span>)</span>
+<span id="cb89-33"><a href="#cb89-33" aria-hidden="true" tabindex="-1"></a>            <span class="fu">load</span>(file.name.X_n)</span>
+<span id="cb89-34"><a href="#cb89-34" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb89-35"><a href="#cb89-35" aria-hidden="true" tabindex="-1"></a>            <span class="fu">sample.Z.theta_n.Omega</span> (<span class="at">X_n =</span> X_n, </span>
+<span id="cb89-36"><a href="#cb89-36" aria-hidden="true" tabindex="-1"></a>                              <span class="at">phi =</span> phi, </span>
+<span id="cb89-37"><a href="#cb89-37" aria-hidden="true" tabindex="-1"></a>                              <span class="at">alpha =</span> alpha, </span>
+<span id="cb89-38"><a href="#cb89-38" aria-hidden="true" tabindex="-1"></a>                              <span class="at">Omega =</span> Omega,</span>
+<span id="cb89-39"><a href="#cb89-39" aria-hidden="true" tabindex="-1"></a>                              <span class="at">beta =</span> beta,</span>
+<span id="cb89-40"><a href="#cb89-40" aria-hidden="true" tabindex="-1"></a>                              <span class="at">gibbs.idx =</span> gibbs.idx, </span>
+<span id="cb89-41"><a href="#cb89-41" aria-hidden="true" tabindex="-1"></a>                              <span class="at">compute.elbo =</span> compute.elbo)      </span>
+<span id="cb89-42"><a href="#cb89-42" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb89-43"><a href="#cb89-43" aria-hidden="true" tabindex="-1"></a>        tmp.dir <span class="ot">&lt;-</span> <span class="fu">tempdir</span>(<span class="at">check=</span><span class="cn">TRUE</span>)</span>
+<span id="cb89-44"><a href="#cb89-44" aria-hidden="true" tabindex="-1"></a>        <span class="fu">sfExport</span>(<span class="st">"phi"</span>, <span class="st">"alpha"</span>, <span class="st">"Omega"</span>, <span class="st">"beta"</span>, <span class="st">"gibbs.idx"</span>, <span class="st">"seed"</span>, </span>
+<span id="cb89-45"><a href="#cb89-45" aria-hidden="true" tabindex="-1"></a>                    <span class="st">"compute.elbo"</span>, <span class="st">"sample.Z.theta_n.Omega"</span>,<span class="st">"rdirichlet"</span>,<span class="st">"tmp.dir"</span>)</span>
+<span id="cb89-46"><a href="#cb89-46" aria-hidden="true" tabindex="-1"></a>        <span class="fu">environment</span>(cpu.fun) <span class="ot">&lt;-</span> <span class="fu">globalenv</span>()</span>
+<span id="cb89-47"><a href="#cb89-47" aria-hidden="true" tabindex="-1"></a>        gibbs.list <span class="ot">&lt;-</span> <span class="fu">sfLapply</span>( <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(X), cpu.fun)</span>
+<span id="cb89-48"><a href="#cb89-48" aria-hidden="true" tabindex="-1"></a>        <span class="fu">sfStop</span>()</span>
+<span id="cb89-49"><a href="#cb89-49" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb89-50"><a href="#cb89-50" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>{</span>
+<span id="cb89-51"><a href="#cb89-51" aria-hidden="true" tabindex="-1"></a>        <span class="co">#single thread</span></span>
+<span id="cb89-52"><a href="#cb89-52" aria-hidden="true" tabindex="-1"></a>        cpu.fun <span class="ot">&lt;-</span> <span class="cf">function</span>(n) {</span>
+<span id="cb89-53"><a href="#cb89-53" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span>(<span class="sc">!</span><span class="fu">is.null</span>(seed)) <span class="fu">set.seed</span>(seed)</span>
+<span id="cb89-54"><a href="#cb89-54" aria-hidden="true" tabindex="-1"></a>                <span class="fu">cat</span>(n,<span class="st">" "</span>)</span>
+<span id="cb89-55"><a href="#cb89-55" aria-hidden="true" tabindex="-1"></a>                <span class="fu">sample.Z.theta_n.Omega</span> (<span class="at">X_n =</span> X[n,], </span>
+<span id="cb89-56"><a href="#cb89-56" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">phi =</span> phi,</span>
+<span id="cb89-57"><a href="#cb89-57" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">alpha =</span> alpha, </span>
+<span id="cb89-58"><a href="#cb89-58" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">Omega =</span> Omega,</span>
+<span id="cb89-59"><a href="#cb89-59" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">alpha =</span> alpha,</span>
+<span id="cb89-60"><a href="#cb89-60" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">gibbs.idx =</span> gibbs.idx,</span>
+<span id="cb89-61"><a href="#cb89-61" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">compute.elbo =</span> compute.elbo)</span>
+<span id="cb89-62"><a href="#cb89-62" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb89-63"><a href="#cb89-63" aria-hidden="true" tabindex="-1"></a>        gibbs.list <span class="ot">&lt;-</span> <span class="fu">lapply</span>( <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(X), cpu.fun)</span>
+<span id="cb89-64"><a href="#cb89-64" aria-hidden="true" tabindex="-1"></a>        <span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb89-65"><a href="#cb89-65" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb89-66"><a href="#cb89-66" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb89-67"><a href="#cb89-67" aria-hidden="true" tabindex="-1"></a>    jointPost <span class="ot">&lt;-</span> <span class="fu">newJointPost</span>(<span class="at">bulkID =</span> <span class="fu">rownames</span>(X),</span>
+<span id="cb89-68"><a href="#cb89-68" aria-hidden="true" tabindex="-1"></a>                              <span class="at">geneID =</span> <span class="fu">colnames</span>(X), </span>
+<span id="cb89-69"><a href="#cb89-69" aria-hidden="true" tabindex="-1"></a>                              <span class="at">cellType =</span> <span class="fu">rownames</span>(phi),</span>
+<span id="cb89-70"><a href="#cb89-70" aria-hidden="true" tabindex="-1"></a>                              <span class="at">gibbs.list =</span> gibbs.list )</span>
+<span id="cb89-71"><a href="#cb89-71" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(jointPost)</span>
+<span id="cb89-72"><a href="#cb89-72" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb90"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb90-1"><a href="#cb90-1" aria-hidden="true" tabindex="-1"></a><span class="co">#' function to run Gibbs sampling for Z and theta on each bulk</span></span>
+<span id="cb90-2"><a href="#cb90-2" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param X_n a numeric vector of reads count of the nth bulk sample</span></span>
+<span id="cb90-3"><a href="#cb90-3" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param phi an array of dimension K*G to denote reference matrix</span></span>
+<span id="cb90-4"><a href="#cb90-4" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param alpha a numeric value to denote the symmetric Dirichlet prior </span></span>
+<span id="cb90-5"><a href="#cb90-5" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param gibbs.idx a numeric vector to denote the index of samples to be retained from MCMC chain</span></span>
+<span id="cb90-6"><a href="#cb90-6" aria-hidden="true" tabindex="-1"></a><span class="co">#' @param compute.elbo a logical variable to denote if compute ELBO. Default=FALSE.</span></span>
+<span id="cb90-7"><a href="#cb90-7" aria-hidden="true" tabindex="-1"></a><span class="co">#' return a list containing the posterior mean of Z_n and theta_n</span></span>
+<span id="cb90-8"><a href="#cb90-8" aria-hidden="true" tabindex="-1"></a>sample.Z.theta_n.Omega <span class="ot">&lt;-</span> <span class="cf">function</span>(X_n, </span>
+<span id="cb90-9"><a href="#cb90-9" aria-hidden="true" tabindex="-1"></a>                                 phi,</span>
+<span id="cb90-10"><a href="#cb90-10" aria-hidden="true" tabindex="-1"></a>                                alpha,</span>
+<span id="cb90-11"><a href="#cb90-11" aria-hidden="true" tabindex="-1"></a>                                Omega, </span>
+<span id="cb90-12"><a href="#cb90-12" aria-hidden="true" tabindex="-1"></a>                                beta,</span>
+<span id="cb90-13"><a href="#cb90-13" aria-hidden="true" tabindex="-1"></a>                                gibbs.idx,</span>
+<span id="cb90-14"><a href="#cb90-14" aria-hidden="true" tabindex="-1"></a>                                <span class="at">compute.elbo=</span><span class="cn">FALSE</span>){</span>
+<span id="cb90-15"><a href="#cb90-15" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb90-16"><a href="#cb90-16" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Setting up Omega implementatiom</span></span>
+<span id="cb90-17"><a href="#cb90-17" aria-hidden="true" tabindex="-1"></a>    K_names <span class="ot">&lt;-</span> <span class="fu">rownames</span>(phi) <span class="co"># # of Sender States</span></span>
+<span id="cb90-18"><a href="#cb90-18" aria-hidden="true" tabindex="-1"></a>    S_names <span class="ot">&lt;-</span> <span class="fu">rownames</span>(phi) <span class="co"># # of Receiver States</span></span>
+<span id="cb90-19"><a href="#cb90-19" aria-hidden="true" tabindex="-1"></a>    G_names <span class="ot">&lt;-</span> <span class="fu">colnames</span>(phi) <span class="co"># # of Genes</span></span>
+<span id="cb90-20"><a href="#cb90-20" aria-hidden="true" tabindex="-1"></a>    G_shared_idx <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">colnames</span>(phi) <span class="sc">%in%</span> <span class="fu">dimnames</span>(Omega)<span class="sc">$</span>Gene)</span>
+<span id="cb90-21"><a href="#cb90-21" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb90-22"><a href="#cb90-22" aria-hidden="true" tabindex="-1"></a>    K_dim <span class="ot">&lt;-</span> <span class="fu">length</span>(K_names)</span>
+<span id="cb90-23"><a href="#cb90-23" aria-hidden="true" tabindex="-1"></a>    S_dim <span class="ot">&lt;-</span> <span class="fu">length</span>(S_names)</span>
+<span id="cb90-24"><a href="#cb90-24" aria-hidden="true" tabindex="-1"></a>    G_dim <span class="ot">&lt;-</span> <span class="fu">length</span>(G_names)</span>
+<span id="cb90-25"><a href="#cb90-25" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb90-26"><a href="#cb90-26" aria-hidden="true" tabindex="-1"></a>    theta_n.i <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">/</span>S_dim, S_dim)</span>
+<span id="cb90-27"><a href="#cb90-27" aria-hidden="true" tabindex="-1"></a>    Z_n.i <span class="ot">&lt;-</span> <span class="fu">array</span>(<span class="cn">NA</span>,<span class="fu">c</span>(G_dim,S_dim))</span>
+<span id="cb90-28"><a href="#cb90-28" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb90-29"><a href="#cb90-29" aria-hidden="true" tabindex="-1"></a>    Z_n.sum <span class="ot">&lt;-</span> <span class="fu">array</span>(<span class="dv">0</span>,<span class="fu">c</span>(G_dim,S_dim))</span>
+<span id="cb90-30"><a href="#cb90-30" aria-hidden="true" tabindex="-1"></a>    theta_n.sum <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, S_dim)</span>
+<span id="cb90-31"><a href="#cb90-31" aria-hidden="true" tabindex="-1"></a>    theta_n2.sum <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, S_dim)</span>
+<span id="cb90-32"><a href="#cb90-32" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb90-33"><a href="#cb90-33" aria-hidden="true" tabindex="-1"></a>    <span class="co">#variable for computing ELBO</span></span>
+<span id="cb90-34"><a href="#cb90-34" aria-hidden="true" tabindex="-1"></a>    multinom.coef <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb90-35"><a href="#cb90-35" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb90-36"><a href="#cb90-36" aria-hidden="true" tabindex="-1"></a>    <span class="co"># </span></span>
+<span id="cb90-37"><a href="#cb90-37" aria-hidden="true" tabindex="-1"></a>    phi_mat <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(phi)</span>
+<span id="cb90-38"><a href="#cb90-38" aria-hidden="true" tabindex="-1"></a>    X_vec <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(X_n[G_names])</span>
+<span id="cb90-39"><a href="#cb90-39" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb90-40"><a href="#cb90-40" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Making Omega flat</span></span>
+<span id="cb90-41"><a href="#cb90-41" aria-hidden="true" tabindex="-1"></a>    Omega_flat <span class="ot">&lt;-</span> <span class="fu">matrix</span>(Omega[K_names, S_names, G_shared_idx], <span class="at">nrow =</span> S_dim, <span class="at">ncol =</span> S_dim <span class="sc">*</span> <span class="fu">length</span>(G_shared_idx))</span>
+<span id="cb90-42"><a href="#cb90-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb90-43"><a href="#cb90-43" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">max</span>(gibbs.idx)){</span>
+<span id="cb90-44"><a href="#cb90-44" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb90-45"><a href="#cb90-45" aria-hidden="true" tabindex="-1"></a>      niche_pressure_vec <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(theta_n.i <span class="sc">%*%</span> Omega_flat)</span>
+<span id="cb90-46"><a href="#cb90-46" aria-hidden="true" tabindex="-1"></a>      niche_pressure_mat <span class="ot">&lt;-</span> <span class="fu">matrix</span>(niche_pressure_vec, <span class="at">nrow =</span> S_dim, <span class="at">ncol =</span> <span class="fu">length</span>(G_shared_idx))</span>
+<span id="cb90-47"><a href="#cb90-47" aria-hidden="true" tabindex="-1"></a>      niche_pressure_mat <span class="ot">&lt;-</span> (niche_pressure_mat) <span class="sc">/</span> <span class="fu">sd</span>(niche_pressure_mat)</span>
+<span id="cb90-48"><a href="#cb90-48" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb90-49"><a href="#cb90-49" aria-hidden="true" tabindex="-1"></a>        <span class="co">#sample Z for patient n</span></span>
+<span id="cb90-50"><a href="#cb90-50" aria-hidden="true" tabindex="-1"></a>      prob.mat <span class="ot">&lt;-</span> (phi_mat <span class="sc">*</span> theta_n.i)</span>
+<span id="cb90-51"><a href="#cb90-51" aria-hidden="true" tabindex="-1"></a>      prob.mat[,G_shared_idx] <span class="ot">&lt;-</span> prob.mat[,G_shared_idx] <span class="sc">*</span> <span class="fu">exp</span>(beta <span class="sc">*</span> niche_pressure_mat)</span>
+<span id="cb90-52"><a href="#cb90-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb90-53"><a href="#cb90-53" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> (g <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>G_dim) {</span>
+<span id="cb90-54"><a href="#cb90-54" aria-hidden="true" tabindex="-1"></a>        Z_n.i[g,] <span class="ot">&lt;-</span> <span class="fu">rmultinom</span>(<span class="at">n =</span> <span class="dv">1</span>, <span class="at">size =</span> X_vec[g], <span class="at">prob =</span> prob.mat[, g])</span>
+<span id="cb90-55"><a href="#cb90-55" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb90-56"><a href="#cb90-56" aria-hidden="true" tabindex="-1"></a>        <span class="co"># sample theta for patient n</span></span>
+<span id="cb90-57"><a href="#cb90-57" aria-hidden="true" tabindex="-1"></a>        Z_nk.i <span class="ot">&lt;-</span> <span class="fu">colSums</span>(Z_n.i) <span class="co">#total count for each cell type</span></span>
+<span id="cb90-58"><a href="#cb90-58" aria-hidden="true" tabindex="-1"></a>        theta_n.i <span class="ot">&lt;-</span> <span class="fu">rdirichlet</span>(<span class="at">alpha =</span> Z_nk.i <span class="sc">+</span> alpha)</span>
+<span id="cb90-59"><a href="#cb90-59" aria-hidden="true" tabindex="-1"></a>                </span>
+<span id="cb90-60"><a href="#cb90-60" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span>(i <span class="sc">%in%</span> gibbs.idx) {</span>
+<span id="cb90-61"><a href="#cb90-61" aria-hidden="true" tabindex="-1"></a>            <span class="co">#collect sample and compute posterior sum</span></span>
+<span id="cb90-62"><a href="#cb90-62" aria-hidden="true" tabindex="-1"></a>            Z_n.sum <span class="ot">&lt;-</span> Z_n.sum <span class="sc">+</span> Z_n.i</span>
+<span id="cb90-63"><a href="#cb90-63" aria-hidden="true" tabindex="-1"></a>            theta_n.sum <span class="ot">&lt;-</span> theta_n.sum <span class="sc">+</span> theta_n.i</span>
+<span id="cb90-64"><a href="#cb90-64" aria-hidden="true" tabindex="-1"></a>            theta_n2.sum <span class="ot">&lt;-</span> theta_n2.sum <span class="sc">+</span> theta_n.i<span class="sc">^</span><span class="dv">2</span></span>
+<span id="cb90-65"><a href="#cb90-65" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb90-66"><a href="#cb90-66" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span>(compute.elbo){</span>
+<span id="cb90-67"><a href="#cb90-67" aria-hidden="true" tabindex="-1"></a>                <span class="co"># multinom.coef.i &lt;- sum((alpha-1) * log(theta_n.i), na.rm=TRUE) + </span></span>
+<span id="cb90-68"><a href="#cb90-68" aria-hidden="true" tabindex="-1"></a>                                   <span class="co"># sum(Z_nk.i * log(theta_n.i), na.rm=TRUE) - </span></span>
+<span id="cb90-69"><a href="#cb90-69" aria-hidden="true" tabindex="-1"></a>                                   <span class="co"># sum(lfactorial(Z_nk.i)) - sum(lfactorial(Z_n.i))</span></span>
+<span id="cb90-70"><a href="#cb90-70" aria-hidden="true" tabindex="-1"></a>                multinom.coef.i <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">lfactorial</span>(Z_nk.i)) <span class="sc">-</span> <span class="fu">sum</span>(<span class="fu">lfactorial</span>(Z_n.i))</span>
+<span id="cb90-71"><a href="#cb90-71" aria-hidden="true" tabindex="-1"></a>                multinom.coef <span class="ot">&lt;-</span> multinom.coef <span class="sc">+</span> multinom.coef.i</span>
+<span id="cb90-72"><a href="#cb90-72" aria-hidden="true" tabindex="-1"></a>                </span>
+<span id="cb90-73"><a href="#cb90-73" aria-hidden="true" tabindex="-1"></a>            }   </span>
+<span id="cb90-74"><a href="#cb90-74" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb90-75"><a href="#cb90-75" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb90-76"><a href="#cb90-76" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span>((i <span class="sc">%%</span> <span class="dv">50</span>) <span class="sc">==</span> <span class="dv">0</span>) <span class="fu">gc</span>()</span>
+<span id="cb90-77"><a href="#cb90-77" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb90-78"><a href="#cb90-78" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb90-79"><a href="#cb90-79" aria-hidden="true" tabindex="-1"></a>    samples.size <span class="ot">&lt;-</span> <span class="fu">length</span>(gibbs.idx)</span>
+<span id="cb90-80"><a href="#cb90-80" aria-hidden="true" tabindex="-1"></a>    <span class="co">#gibbs.constant &lt;- multinom.coef + z.logtheta + theta.dirichlet.alpha</span></span>
+<span id="cb90-81"><a href="#cb90-81" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb90-82"><a href="#cb90-82" aria-hidden="true" tabindex="-1"></a>    Z_n <span class="ot">&lt;-</span> Z_n.sum <span class="sc">/</span> samples.size</span>
+<span id="cb90-83"><a href="#cb90-83" aria-hidden="true" tabindex="-1"></a>    theta_n <span class="ot">&lt;-</span> theta_n.sum <span class="sc">/</span> samples.size</span>
+<span id="cb90-84"><a href="#cb90-84" aria-hidden="true" tabindex="-1"></a>    theta.cv_n <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(theta_n2.sum <span class="sc">/</span> samples.size <span class="sc">-</span> (theta_n<span class="sc">^</span><span class="dv">2</span>)) <span class="sc">/</span> theta_n</span>
+<span id="cb90-85"><a href="#cb90-85" aria-hidden="true" tabindex="-1"></a>    gibbs.constant <span class="ot">&lt;-</span> multinom.coef <span class="sc">/</span> samples.size</span>
+<span id="cb90-86"><a href="#cb90-86" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb90-87"><a href="#cb90-87" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">Z_n =</span> Z_n, </span>
+<span id="cb90-88"><a href="#cb90-88" aria-hidden="true" tabindex="-1"></a>                <span class="at">theta_n =</span> theta_n,</span>
+<span id="cb90-89"><a href="#cb90-89" aria-hidden="true" tabindex="-1"></a>                <span class="at">theta.cv_n =</span> theta.cv_n,</span>
+<span id="cb90-90"><a href="#cb90-90" aria-hidden="true" tabindex="-1"></a>                <span class="at">gibbs.constant =</span> gibbs.constant))</span>
+<span id="cb90-91"><a href="#cb90-91" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="running" class="level3">
+<h3 class="anchored" data-anchor-id="running">2.2.2 Running</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb91"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb91-1"><a href="#cb91-1" aria-hidden="true" tabindex="-1"></a>dp_res <span class="ot">&lt;-</span> <span class="fu">run.prism.Omega</span>(<span class="at">prism =</span> myPrism, <span class="at">Omega =</span> Omega, <span class="at">n.cores=</span><span class="dv">6</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Run Gibbs sampling... 
+Current time:  2026-01-25 23:53:56.922715 
+Estimated time to complete:  5mins 
+Estimated finishing time:  2026-01-25 23:58:05.722715 </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: replacing previous import 'gplots::lowess' by 'stats::lowess' when
+loading 'BayesPrism'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: replacing previous import 'BiocParallel::register' by 'NMF::register'
+when loading 'BayesPrism'</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Start run... </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in searchCommandline(parallel, cpus = cpus, type = type, socketHosts =
+socketHosts, : Unknown option on commandline: --file</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>R Version:  R version 4.5.0 (2025-04-11 ucrt) </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>snowfall 1.84-6.3 initialized (using snow 0.4-4): parallel execution on 6 CPUs.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Stopping cluster</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Update the reference matrix ... </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in searchCommandline(parallel, cpus = cpus, type = type, socketHosts =
+socketHosts, : Unknown option on commandline: --file</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>snowfall 1.84-6.3 initialized (using snow 0.4-4): parallel execution on 6 CPUs.
+
+
+Stopping cluster</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Run Gibbs sampling using updated reference ... 
+Current time:  2026-01-25 23:56:35.600081 
+Estimated time to complete:  2mins 
+Estimated finishing time:  2026-01-25 23:58:01.200081 
+Start run... </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in searchCommandline(parallel, cpus = cpus, type = type, socketHosts =
+socketHosts, : Unknown option on commandline: --file</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>snowfall 1.84-6.3 initialized (using snow 0.4-4): parallel execution on 6 CPUs.
+
+
+Stopping cluster</code></pre>
+</div>
+</div>
+</section>
+<section id="experiments" class="level3">
+<h3 class="anchored" data-anchor-id="experiments">2.2.3 Experiments</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb106"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb106-1"><a href="#cb106-1" aria-hidden="true" tabindex="-1"></a>sample_blk <span class="ot">&lt;-</span> <span class="st">"AN00000904_Br2720_Post_Bulk"</span></span>
+<span id="cb106-2"><a href="#cb106-2" aria-hidden="true" tabindex="-1"></a>X_n <span class="ot">&lt;-</span> myPrism<span class="sc">@</span>mixture[sample_blk, ]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb107"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb107-1"><a href="#cb107-1" aria-hidden="true" tabindex="-1"></a>beta <span class="ot">&lt;-</span> <span class="fl">0.4</span></span>
+<span id="cb107-2"><a href="#cb107-2" aria-hidden="true" tabindex="-1"></a>alpha <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb107-3"><a href="#cb107-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb107-4"><a href="#cb107-4" aria-hidden="true" tabindex="-1"></a>gibbs.control <span class="ot">&lt;-</span> <span class="fu">valid.gibbs.control</span>(<span class="fu">list</span>(<span class="at">n.cores =</span> <span class="dv">14</span>, <span class="at">chain.length =</span> <span class="dv">1000</span>))</span>
+<span id="cb107-5"><a href="#cb107-5" aria-hidden="true" tabindex="-1"></a>gibbs.idx <span class="ot">&lt;-</span> <span class="fu">get.gibbs.idx</span>(gibbs.control)</span>
+<span id="cb107-6"><a href="#cb107-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb107-7"><a href="#cb107-7" aria-hidden="true" tabindex="-1"></a><span class="co"># --- PRE-COMPUTATION (Run once per sample) ---</span></span>
+<span id="cb107-8"><a href="#cb107-8" aria-hidden="true" tabindex="-1"></a>K_names <span class="ot">&lt;-</span> <span class="fu">rownames</span>(phi)</span>
+<span id="cb107-9"><a href="#cb107-9" aria-hidden="true" tabindex="-1"></a>S_names <span class="ot">&lt;-</span> <span class="fu">rownames</span>(phi)</span>
+<span id="cb107-10"><a href="#cb107-10" aria-hidden="true" tabindex="-1"></a>G_names <span class="ot">&lt;-</span> <span class="fu">colnames</span>(phi)</span>
+<span id="cb107-11"><a href="#cb107-11" aria-hidden="true" tabindex="-1"></a>G_shared_idx <span class="ot">&lt;-</span> <span class="fu">which</span>(G_names <span class="sc">%in%</span> <span class="fu">dimnames</span>(Omega)<span class="sc">$</span>Gene)</span>
+<span id="cb107-12"><a href="#cb107-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert to pure numerical matrices (removes overhead of names/attributes)</span></span>
+<span id="cb107-13"><a href="#cb107-13" aria-hidden="true" tabindex="-1"></a>phi_mat <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(phi)</span>
+<span id="cb107-14"><a href="#cb107-14" aria-hidden="true" tabindex="-1"></a>X_vec <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(X_n[G_names])</span>
+<span id="cb107-15"><a href="#cb107-15" aria-hidden="true" tabindex="-1"></a>K_dim <span class="ot">&lt;-</span> <span class="fu">length</span>(K_names)</span>
+<span id="cb107-16"><a href="#cb107-16" aria-hidden="true" tabindex="-1"></a>S_dim <span class="ot">&lt;-</span> <span class="fu">length</span>(S_names)</span>
+<span id="cb107-17"><a href="#cb107-17" aria-hidden="true" tabindex="-1"></a>G_dim <span class="ot">&lt;-</span> <span class="fu">length</span>(G_names)</span>
+<span id="cb107-18"><a href="#cb107-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb107-19"><a href="#cb107-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Flatten Omega: [Sender] x [Receiver * Gene]</span></span>
+<span id="cb107-20"><a href="#cb107-20" aria-hidden="true" tabindex="-1"></a><span class="co"># This makes calculating Niche Pressure a single matrix multiplication</span></span>
+<span id="cb107-21"><a href="#cb107-21" aria-hidden="true" tabindex="-1"></a>Omega_flat <span class="ot">&lt;-</span> <span class="fu">matrix</span>(Omega[K_names, S_names, G_names[G_shared_idx]], <span class="at">nrow =</span> S_dim, <span class="at">ncol =</span> S_dim <span class="sc">*</span> <span class="fu">length</span>(G_shared_idx))</span>
+<span id="cb107-22"><a href="#cb107-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb107-23"><a href="#cb107-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialize variables</span></span>
+<span id="cb107-24"><a href="#cb107-24" aria-hidden="true" tabindex="-1"></a>theta_n.i <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">/</span>S_dim, S_dim)</span>
+<span id="cb107-25"><a href="#cb107-25" aria-hidden="true" tabindex="-1"></a>Z_n.i <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="at">nrow =</span> G_dim, <span class="at">ncol =</span> S_dim)</span>
+<span id="cb107-26"><a href="#cb107-26" aria-hidden="true" tabindex="-1"></a>Z_n.sum <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="at">nrow =</span> G_dim, <span class="at">ncol =</span> S_dim)</span>
+<span id="cb107-27"><a href="#cb107-27" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(Z_n.sum) <span class="ot">&lt;-</span> G_names</span>
+<span id="cb107-28"><a href="#cb107-28" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(Z_n.sum) <span class="ot">&lt;-</span> S_names</span>
+<span id="cb107-29"><a href="#cb107-29" aria-hidden="true" tabindex="-1"></a>theta_n.sum <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, S_dim)</span>
+<span id="cb107-30"><a href="#cb107-30" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(theta_n.sum) <span class="ot">&lt;-</span> S_names</span>
+<span id="cb107-31"><a href="#cb107-31" aria-hidden="true" tabindex="-1"></a>theta_n2.sum <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, S_dim)</span>
+<span id="cb107-32"><a href="#cb107-32" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(theta_n2.sum) <span class="ot">&lt;-</span> S_names</span>
+<span id="cb107-33"><a href="#cb107-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb107-34"><a href="#cb107-34" aria-hidden="true" tabindex="-1"></a>t.sum <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb107-35"><a href="#cb107-35" aria-hidden="true" tabindex="-1"></a><span class="co"># --- START OF OPTIMIZED LOOP ---</span></span>
+<span id="cb107-36"><a href="#cb107-36" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">max</span>(gibbs.idx)){</span>
+<span id="cb107-37"><a href="#cb107-37" aria-hidden="true" tabindex="-1"></a>  ti <span class="ot">&lt;-</span> <span class="fu">proc.time</span>()[<span class="st">"elapsed"</span>]</span>
+<span id="cb107-38"><a href="#cb107-38" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb107-39"><a href="#cb107-39" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 1. CALCULATE NICHE PRESSURE (High Speed %*%)</span></span>
+<span id="cb107-40"><a href="#cb107-40" aria-hidden="true" tabindex="-1"></a>  <span class="co"># This calculates sum_k (theta_k * Omega_ksg) for all s and g in one shot</span></span>
+<span id="cb107-41"><a href="#cb107-41" aria-hidden="true" tabindex="-1"></a>  niche_pressure_vec <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(theta_n.i <span class="sc">%*%</span> Omega_flat)</span>
+<span id="cb107-42"><a href="#cb107-42" aria-hidden="true" tabindex="-1"></a>  niche_pressure_mat <span class="ot">&lt;-</span> <span class="fu">matrix</span>(niche_pressure_vec, <span class="at">nrow =</span> S_dim, <span class="at">ncol =</span> <span class="fu">length</span>(G_shared_idx))</span>
+<span id="cb107-43"><a href="#cb107-43" aria-hidden="true" tabindex="-1"></a>  niche_pressure_mat <span class="ot">&lt;-</span> (niche_pressure_mat) <span class="sc">/</span> <span class="fu">sd</span>(niche_pressure_mat)</span>
+<span id="cb107-44"><a href="#cb107-44" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb107-45"><a href="#cb107-45" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 2. VECTORIZED PROBABILITY MATRIX</span></span>
+<span id="cb107-46"><a href="#cb107-46" aria-hidden="true" tabindex="-1"></a>  <span class="co"># We use the fact that (phi * theta) is a column-wise scaling</span></span>
+<span id="cb107-47"><a href="#cb107-47" aria-hidden="true" tabindex="-1"></a>  <span class="co"># and exp(beta * niche) is element-wise</span></span>
+<span id="cb107-48"><a href="#cb107-48" aria-hidden="true" tabindex="-1"></a>  prob.mat <span class="ot">&lt;-</span> (phi_mat <span class="sc">*</span> theta_n.i)</span>
+<span id="cb107-49"><a href="#cb107-49" aria-hidden="true" tabindex="-1"></a>  prob.mat[,G_shared_idx] <span class="ot">&lt;-</span> prob.mat[,G_shared_idx] <span class="sc">*</span> <span class="fu">exp</span>(beta <span class="sc">*</span> niche_pressure_mat)</span>
+<span id="cb107-50"><a href="#cb107-50" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb107-51"><a href="#cb107-51" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 3. THE SAMPLING LOOP (The bottleneck)</span></span>
+<span id="cb107-52"><a href="#cb107-52" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Optimization: Use an integer loop and avoid any names</span></span>
+<span id="cb107-53"><a href="#cb107-53" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (g <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>G_dim) {</span>
+<span id="cb107-54"><a href="#cb107-54" aria-hidden="true" tabindex="-1"></a>    <span class="co"># size is the total bulk count for gene g</span></span>
+<span id="cb107-55"><a href="#cb107-55" aria-hidden="true" tabindex="-1"></a>    Z_n.i[g,] <span class="ot">&lt;-</span> <span class="fu">rmultinom</span>(<span class="at">n =</span> <span class="dv">1</span>, <span class="at">size =</span> X_vec[g], <span class="at">prob =</span> prob.mat[, g])</span>
+<span id="cb107-56"><a href="#cb107-56" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb107-57"><a href="#cb107-57" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb107-58"><a href="#cb107-58" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 4. UPDATE THETA</span></span>
+<span id="cb107-59"><a href="#cb107-59" aria-hidden="true" tabindex="-1"></a>  Z_nk.i <span class="ot">&lt;-</span> <span class="fu">colSums</span>(Z_n.i)</span>
+<span id="cb107-60"><a href="#cb107-60" aria-hidden="true" tabindex="-1"></a>  theta_n.i <span class="ot">&lt;-</span> <span class="fu">rdirichlet</span>(Z_nk.i <span class="sc">+</span> alpha)</span>
+<span id="cb107-61"><a href="#cb107-61" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb107-62"><a href="#cb107-62" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 5. ACCUMULATE</span></span>
+<span id="cb107-63"><a href="#cb107-63" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(i <span class="sc">%in%</span> gibbs.idx) {</span>
+<span id="cb107-64"><a href="#cb107-64" aria-hidden="true" tabindex="-1"></a>    Z_n.sum <span class="ot">&lt;-</span> Z_n.sum <span class="sc">+</span> Z_n.i</span>
+<span id="cb107-65"><a href="#cb107-65" aria-hidden="true" tabindex="-1"></a>    theta_n.sum <span class="ot">&lt;-</span> theta_n.sum <span class="sc">+</span> theta_n.i</span>
+<span id="cb107-66"><a href="#cb107-66" aria-hidden="true" tabindex="-1"></a>    theta_n2.sum <span class="ot">&lt;-</span> theta_n2.sum <span class="sc">+</span> theta_n.i<span class="sc">^</span><span class="dv">2</span></span>
+<span id="cb107-67"><a href="#cb107-67" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb107-68"><a href="#cb107-68" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb107-69"><a href="#cb107-69" aria-hidden="true" tabindex="-1"></a>  tt <span class="ot">&lt;-</span> <span class="fu">proc.time</span>()[<span class="st">"elapsed"</span>] <span class="sc">-</span> ti</span>
+<span id="cb107-70"><a href="#cb107-70" aria-hidden="true" tabindex="-1"></a>  t.sum <span class="ot">&lt;-</span> t.sum <span class="sc">+</span> tt</span>
+<span id="cb107-71"><a href="#cb107-71" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>((i <span class="sc">%%</span> <span class="dv">50</span>) <span class="sc">==</span> <span class="dv">0</span>){</span>
+<span id="cb107-72"><a href="#cb107-72" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cat</span>(<span class="st">"</span><span class="sc">\r</span><span class="st">"</span>,i,<span class="st">"/"</span>,<span class="fu">max</span>(gibbs.idx))</span>
+<span id="cb107-73"><a href="#cb107-73" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cat</span>(<span class="st">": "</span>,t.sum<span class="sc">/</span><span class="dv">60</span>, <span class="st">" min elapsed. "</span>, (t.sum<span class="sc">/</span>i)<span class="sc">*</span>(<span class="fu">max</span>(gibbs.idx)<span class="sc">-</span>i)<span class="sc">/</span><span class="dv">60</span>, <span class="st">" min Remaining."</span>,  <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span>
+<span id="cb107-74"><a href="#cb107-74" aria-hidden="true" tabindex="-1"></a>    <span class="fu">gc</span>()</span>
+<span id="cb107-75"><a href="#cb107-75" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb107-76"><a href="#cb107-76" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb108"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb108-1"><a href="#cb108-1" aria-hidden="true" tabindex="-1"></a>samples.size <span class="ot">&lt;-</span> <span class="fu">length</span>(gibbs.idx)</span>
+<span id="cb108-2"><a href="#cb108-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">#gibbs.constant &lt;- multinom.coef + z.logtheta + theta.dirichlet.alpha</span></span>
+<span id="cb108-3"><a href="#cb108-3" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb108-4"><a href="#cb108-4" aria-hidden="true" tabindex="-1"></a>Z_n <span class="ot">&lt;-</span> Z_n.sum <span class="sc">/</span> samples.size</span>
+<span id="cb108-5"><a href="#cb108-5" aria-hidden="true" tabindex="-1"></a>theta_n <span class="ot">&lt;-</span> theta_n.sum <span class="sc">/</span> samples.size</span>
+<span id="cb108-6"><a href="#cb108-6" aria-hidden="true" tabindex="-1"></a>theta.cv_n <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(theta_n2.sum <span class="sc">/</span> samples.size <span class="sc">-</span> (theta_n<span class="sc">^</span><span class="dv">2</span>)) <span class="sc">/</span> theta_n</span>
+<span id="cb108-7"><a href="#cb108-7" aria-hidden="true" tabindex="-1"></a><span class="co">#gibbs.constant &lt;- multinom.coef / samples.size</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+</section>
+</section>
+<section id="visualizing" class="level1">
+<h1>Visualizing</h1>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb109"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb109-1"><a href="#cb109-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggalign)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'ggalign' was built under R version 4.5.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: ggplot2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'ggplot2' was built under R version 4.5.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>========================================
+ggalign version 1.2.0
+
+If you use it in published research, please cite: 
+Peng, Y.; Jiang, S.; Song, Y.; et al. ggalign: Bridging the Grammar of Graphics and Biological Multilayered Complexity. Advanced Science. 2025. doi:10.1002/advs.202507799
+========================================</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'ggalign'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:IRanges':
+
+    active</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:S4Vectors':
+
+    active</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb117"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb117-1"><a href="#cb117-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb117-2"><a href="#cb117-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb117-3"><a href="#cb117-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(scales)</span>
+<span id="cb117-4"><a href="#cb117-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(colorspace)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'colorspace' was built under R version 4.5.2</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb119"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb119-1"><a href="#cb119-1" aria-hidden="true" tabindex="-1"></a>type_colors <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb119-2"><a href="#cb119-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">Inhib =</span> <span class="st">"#369acc"</span>, </span>
+<span id="cb119-3"><a href="#cb119-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">Oligo =</span> <span class="st">"#f8e16f"</span>, </span>
+<span id="cb119-4"><a href="#cb119-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">OPC =</span> <span class="st">"#6c584c"</span>, </span>
+<span id="cb119-5"><a href="#cb119-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">Excit =</span> <span class="st">"#95cf92"</span>, </span>
+<span id="cb119-6"><a href="#cb119-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">Astro =</span> <span class="st">"#9656a2"</span>, </span>
+<span id="cb119-7"><a href="#cb119-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">EndoMural =</span> <span class="st">"#f4895f"</span>, </span>
+<span id="cb119-8"><a href="#cb119-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">Micro =</span> <span class="st">"#de324c"</span></span>
+<span id="cb119-9"><a href="#cb119-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb119-10"><a href="#cb119-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb119-11"><a href="#cb119-11" aria-hidden="true" tabindex="-1"></a>state_colors <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(<span class="fu">names</span>(bp_res<span class="sc">@</span>prism<span class="sc">@</span>map), <span class="cf">function</span>(cell_type) {</span>
+<span id="cb119-12"><a href="#cb119-12" aria-hidden="true" tabindex="-1"></a>  states <span class="ot">&lt;-</span> bp_res<span class="sc">@</span>prism<span class="sc">@</span>map[[cell_type]]</span>
+<span id="cb119-13"><a href="#cb119-13" aria-hidden="true" tabindex="-1"></a>  base_col <span class="ot">&lt;-</span> type_colors[cell_type]</span>
+<span id="cb119-14"><a href="#cb119-14" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb119-15"><a href="#cb119-15" aria-hidden="true" tabindex="-1"></a>  shades <span class="ot">&lt;-</span> <span class="fu">colorRampPalette</span>(<span class="fu">c</span>(<span class="fu">lighten</span>(base_col, <span class="fl">0.4</span>), <span class="fu">darken</span>(base_col, <span class="fl">0.4</span>)))(<span class="fu">length</span>(states))</span>
+<span id="cb119-16"><a href="#cb119-16" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb119-17"><a href="#cb119-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(shades) <span class="ot">&lt;-</span> states</span>
+<span id="cb119-18"><a href="#cb119-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(shades)</span>
+<span id="cb119-19"><a href="#cb119-19" aria-hidden="true" tabindex="-1"></a>}))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb120"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb120-1"><a href="#cb120-1" aria-hidden="true" tabindex="-1"></a>state_to_type <span class="ot">&lt;-</span> <span class="fu">stack</span>(bp_res<span class="sc">@</span>prism<span class="sc">@</span>map)</span>
+<span id="cb120-2"><a href="#cb120-2" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(state_to_type) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"cell_state"</span>, <span class="st">"cell_type"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb121"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb121-1"><a href="#cb121-1" aria-hidden="true" tabindex="-1"></a>sce_frac <span class="ot">&lt;-</span> <span class="fu">table</span>(<span class="fu">colData</span>(sce)[sce<span class="sc">$</span>Sample <span class="sc">==</span> sample,]<span class="sc">$</span>cellType_hc)<span class="sc">/</span><span class="fu">sum</span>(<span class="fu">table</span>(<span class="fu">colData</span>(sce)[sce<span class="sc">$</span>Sample <span class="sc">==</span> sample,]<span class="sc">$</span>cellType_hc))</span>
+<span id="cb121-2"><a href="#cb121-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb121-3"><a href="#cb121-3" aria-hidden="true" tabindex="-1"></a>frac_df <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(sce_frac)</span>
+<span id="cb121-4"><a href="#cb121-4" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(frac_df) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"cell_state"</span>, <span class="st">"Proportion"</span>)</span>
+<span id="cb121-5"><a href="#cb121-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb121-6"><a href="#cb121-6" aria-hidden="true" tabindex="-1"></a>frac_df<span class="sc">$</span>Sample <span class="ot">&lt;-</span> <span class="st">"sn-ref"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb122"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb122-1"><a href="#cb122-1" aria-hidden="true" tabindex="-1"></a>bp_frac <span class="ot">&lt;-</span> <span class="fu">as.table</span>(bp_res<span class="sc">@</span>posterior.initial.cellState<span class="sc">@</span>theta[sample_blk,])</span>
+<span id="cb122-2"><a href="#cb122-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb122-3"><a href="#cb122-3" aria-hidden="true" tabindex="-1"></a>bp_df <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(bp_frac)</span>
+<span id="cb122-4"><a href="#cb122-4" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(bp_df) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"cell_state"</span>, <span class="st">"Proportion"</span>)</span>
+<span id="cb122-5"><a href="#cb122-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb122-6"><a href="#cb122-6" aria-hidden="true" tabindex="-1"></a>bp_df<span class="sc">$</span>Sample <span class="ot">&lt;-</span> <span class="st">"BayesPrism"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb123"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb123-1"><a href="#cb123-1" aria-hidden="true" tabindex="-1"></a>interac_frac <span class="ot">&lt;-</span> <span class="fu">as.table</span>(dp_res<span class="sc">@</span>posterior.initial.cellState<span class="sc">@</span>theta[sample_blk,])</span>
+<span id="cb123-2"><a href="#cb123-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb123-3"><a href="#cb123-3" aria-hidden="true" tabindex="-1"></a>interac_df <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(interac_frac)</span>
+<span id="cb123-4"><a href="#cb123-4" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(interac_df) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"cell_state"</span>, <span class="st">"Proportion"</span>)</span>
+<span id="cb123-5"><a href="#cb123-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb123-6"><a href="#cb123-6" aria-hidden="true" tabindex="-1"></a>interac_df<span class="sc">$</span>Sample <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"DynaPrism (β = "</span>, dp_res<span class="sc">@</span>control_param<span class="sc">$</span>gibbs.control<span class="sc">$</span>beta, <span class="st">")"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb124"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb124-1"><a href="#cb124-1" aria-hidden="true" tabindex="-1"></a>df_theta <span class="ot">&lt;-</span> <span class="fu">rbind</span>(frac_df, interac_df, bp_df)</span>
+<span id="cb124-2"><a href="#cb124-2" aria-hidden="true" tabindex="-1"></a>df_theta<span class="sc">$</span>cell_type <span class="ot">&lt;-</span> state_to_type<span class="sc">$</span>cell_type[<span class="fu">match</span>(df_theta<span class="sc">$</span>cell_state, state_to_type<span class="sc">$</span>cell_state)]</span>
+<span id="cb124-3"><a href="#cb124-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb124-4"><a href="#cb124-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Plot using your colors</span></span>
+<span id="cb124-5"><a href="#cb124-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df_theta, <span class="fu">aes</span>(<span class="at">y =</span> Sample, <span class="at">x =</span> Proportion, <span class="at">fill =</span> cell_type)) <span class="sc">+</span></span>
+<span id="cb124-6"><a href="#cb124-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>(<span class="at">stat =</span> <span class="st">"identity"</span>) <span class="sc">+</span></span>
+<span id="cb124-7"><a href="#cb124-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> type_colors) <span class="sc">+</span></span>
+<span id="cb124-8"><a href="#cb124-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="DynaPrism_files/figure-html/frac_plot-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb125"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb125-1"><a href="#cb125-1" aria-hidden="true" tabindex="-1"></a>true_exp_mtx <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="at">nrow =</span> <span class="fu">length</span>(cell_states), </span>
+<span id="cb125-2"><a href="#cb125-2" aria-hidden="true" tabindex="-1"></a>                       <span class="at">ncol =</span> <span class="fu">length</span>(<span class="fu">rownames</span>(sce)),</span>
+<span id="cb125-3"><a href="#cb125-3" aria-hidden="true" tabindex="-1"></a>                       <span class="at">dimnames =</span> <span class="fu">list</span>(cell_states, <span class="fu">rownames</span>(sce)))</span>
+<span id="cb125-4"><a href="#cb125-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb125-5"><a href="#cb125-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (s <span class="cf">in</span> cell_states){</span>
+<span id="cb125-6"><a href="#cb125-6" aria-hidden="true" tabindex="-1"></a>  s_idx <span class="ot">&lt;-</span> <span class="fu">colnames</span>(sce)[sce<span class="sc">$</span>cellType_hc <span class="sc">==</span> s <span class="sc">&amp;</span> sce<span class="sc">$</span>Sample <span class="sc">==</span> sample]</span>
+<span id="cb125-7"><a href="#cb125-7" aria-hidden="true" tabindex="-1"></a>  true_rec_exp <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(<span class="fu">as.matrix</span>(<span class="fu">counts</span>(sce[<span class="fu">colnames</span>(true_exp_mtx), s_idx])))</span>
+<span id="cb125-8"><a href="#cb125-8" aria-hidden="true" tabindex="-1"></a>  true_exp_mtx[s, ] <span class="ot">&lt;-</span> true_rec_exp</span>
+<span id="cb125-9"><a href="#cb125-9" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required namespace: HDF5Array</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb127"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb127-1"><a href="#cb127-1" aria-hidden="true" tabindex="-1"></a>true_exp_mtx <span class="ot">&lt;-</span> <span class="fu">t</span>(true_exp_mtx)</span>
+<span id="cb127-2"><a href="#cb127-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb127-3"><a href="#cb127-3" aria-hidden="true" tabindex="-1"></a>bp_mtx <span class="ot">&lt;-</span> bp_res<span class="sc">@</span>posterior.initial.cellState<span class="sc">@</span>Z[sample_blk, , ]</span>
+<span id="cb127-4"><a href="#cb127-4" aria-hidden="true" tabindex="-1"></a>dp_mtx <span class="ot">&lt;-</span> dp_res<span class="sc">@</span>posterior.initial.cellState<span class="sc">@</span>Z[sample_blk, , ]</span>
+<span id="cb127-5"><a href="#cb127-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb127-6"><a href="#cb127-6" aria-hidden="true" tabindex="-1"></a>true_cpm_mtx <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">t</span>(true_exp_mtx)<span class="sc">/</span><span class="fu">colSums</span>(true_exp_mtx)) <span class="sc">*</span> <span class="fl">1e6</span></span>
+<span id="cb127-7"><a href="#cb127-7" aria-hidden="true" tabindex="-1"></a>Z_cpm <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">t</span>(dp_mtx)<span class="sc">/</span><span class="fu">colSums</span>(dp_mtx)) <span class="sc">*</span> <span class="fl">1e6</span></span>
+<span id="cb127-8"><a href="#cb127-8" aria-hidden="true" tabindex="-1"></a>bp_cpm <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">t</span>(bp_mtx)<span class="sc">/</span><span class="fu">colSums</span>(bp_mtx)) <span class="sc">*</span> <span class="fl">1e6</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb128"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb128-1"><a href="#cb128-1" aria-hidden="true" tabindex="-1"></a>G_names <span class="ot">&lt;-</span> <span class="fu">rownames</span>(dp_mtx)</span>
+<span id="cb128-2"><a href="#cb128-2" aria-hidden="true" tabindex="-1"></a>S_names <span class="ot">&lt;-</span> <span class="fu">colnames</span>(dp_mtx)</span>
+<span id="cb128-3"><a href="#cb128-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb128-4"><a href="#cb128-4" aria-hidden="true" tabindex="-1"></a>G_dim <span class="ot">&lt;-</span> <span class="fu">length</span>(G_names)</span>
+<span id="cb128-5"><a href="#cb128-5" aria-hidden="true" tabindex="-1"></a>S_dim <span class="ot">&lt;-</span> <span class="fu">length</span>(S_names)</span>
+<span id="cb128-6"><a href="#cb128-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb128-7"><a href="#cb128-7" aria-hidden="true" tabindex="-1"></a>Z_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb128-8"><a href="#cb128-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">gene =</span> <span class="fu">rep</span>(G_names, <span class="at">times =</span> S_dim),</span>
+<span id="cb128-9"><a href="#cb128-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">cell_state =</span> <span class="fu">rep</span>(S_names, <span class="at">each =</span> G_dim),</span>
+<span id="cb128-10"><a href="#cb128-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">True =</span> <span class="fu">as.vector</span>(true_cpm_mtx[G_names, S_names]),</span>
+<span id="cb128-11"><a href="#cb128-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">BayesPrism =</span> <span class="fu">as.vector</span>(bp_cpm[G_names, S_names]),</span>
+<span id="cb128-12"><a href="#cb128-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">DynaPrism =</span> <span class="fu">as.vector</span>(Z_cpm[G_names, S_names])</span>
+<span id="cb128-13"><a href="#cb128-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb128-14"><a href="#cb128-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb128-15"><a href="#cb128-15" aria-hidden="true" tabindex="-1"></a>Z_df<span class="sc">$</span>cell_type <span class="ot">&lt;-</span> state_to_type<span class="sc">$</span>cell_type[<span class="fu">match</span>(Z_df<span class="sc">$</span>cell_state, state_to_type<span class="sc">$</span>cell_state)]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb129"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb129-1"><a href="#cb129-1" aria-hidden="true" tabindex="-1"></a>plot_df <span class="ot">&lt;-</span> Z_df[<span class="co">#Z_df$True != 0</span></span>
+<span id="cb129-2"><a href="#cb129-2" aria-hidden="true" tabindex="-1"></a>                <span class="co">#&amp; !Z_df$cell_type %in% c("Excit_11", "Excit_12")</span></span>
+<span id="cb129-3"><a href="#cb129-3" aria-hidden="true" tabindex="-1"></a>                , ]</span>
+<span id="cb129-4"><a href="#cb129-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb129-5"><a href="#cb129-5" aria-hidden="true" tabindex="-1"></a><span class="fu">cor.test</span>((plot_df<span class="sc">$</span>DynaPrism), plot_df<span class="sc">$</span>True, <span class="at">method=</span><span class="st">"spearman"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in cor.test.default((plot_df$DynaPrism), plot_df$True, method =
+"spearman"): Cannot compute exact p-value with ties</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+    Spearman's rank correlation rho
+
+data:  (plot_df$DynaPrism) and plot_df$True
+S = 4.4512e+15, p-value &lt; 2.2e-16
+alternative hypothesis: true rho is not equal to 0
+sample estimates:
+      rho 
+0.3252304 </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb132"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb132-1"><a href="#cb132-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cor.test</span>((plot_df<span class="sc">$</span>BayesPrism), plot_df<span class="sc">$</span>True, <span class="at">method=</span><span class="st">"spearman"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in cor.test.default((plot_df$BayesPrism), plot_df$True, method =
+"spearman"): Cannot compute exact p-value with ties</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+    Spearman's rank correlation rho
+
+data:  (plot_df$BayesPrism) and plot_df$True
+S = 5.3665e+15, p-value &lt; 2.2e-16
+alternative hypothesis: true rho is not equal to 0
+sample estimates:
+      rho 
+0.1864893 </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb135"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb135-1"><a href="#cb135-1" aria-hidden="true" tabindex="-1"></a>dp_mae <span class="ot">&lt;-</span> <span class="fu">mean</span>(<span class="fu">abs</span>(plot_df<span class="sc">$</span>True<span class="sc">-</span>plot_df<span class="sc">$</span>DynaPrism), <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb135-2"><a href="#cb135-2" aria-hidden="true" tabindex="-1"></a>bp_mae <span class="ot">&lt;-</span> <span class="fu">mean</span>(<span class="fu">abs</span>(plot_df<span class="sc">$</span>True<span class="sc">-</span>plot_df<span class="sc">$</span>BayesPrism), <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb135-3"><a href="#cb135-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb135-4"><a href="#cb135-4" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">paste0</span>(<span class="st">"DynaPrism MAE: "</span>, dp_mae), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>DynaPrism MAE: 92.0114379675569 </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb137"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb137-1"><a href="#cb137-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">paste0</span>(<span class="st">"BayesPrism MAE: "</span>, bp_mae))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>BayesPrism MAE: 121.836137154986</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb139"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb139-1"><a href="#cb139-1" aria-hidden="true" tabindex="-1"></a><span class="fu">stack_continuoush</span>(plot_df) <span class="sc">+</span></span>
+<span id="cb139-2"><a href="#cb139-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggalign</span>(<span class="at">mapping =</span> <span class="fu">aes</span>(<span class="at">x =</span> DynaPrism, <span class="at">y =</span> True, <span class="at">color =</span> cell_state)) <span class="sc">+</span></span>
+<span id="cb139-3"><a href="#cb139-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
+<span id="cb139-4"><a href="#cb139-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">slope =</span> <span class="dv">1</span>, <span class="at">intercept =</span> <span class="dv">0</span>) <span class="sc">+</span></span>
+<span id="cb139-5"><a href="#cb139-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.y =</span> <span class="fu">element_text</span>()) <span class="sc">+</span></span>
+<span id="cb139-6"><a href="#cb139-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> state_colors) <span class="sc">+</span></span>
+<span id="cb139-7"><a href="#cb139-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggalign</span>(<span class="at">mapping =</span> <span class="fu">aes</span>(<span class="at">x =</span> BayesPrism, <span class="at">y =</span> True, <span class="at">color =</span> cell_state)) <span class="sc">+</span></span>
+<span id="cb139-8"><a href="#cb139-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
+<span id="cb139-9"><a href="#cb139-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">slope =</span> <span class="dv">1</span>, <span class="at">intercept =</span> <span class="dv">0</span>) <span class="sc">+</span></span>
+<span id="cb139-10"><a href="#cb139-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.y =</span> <span class="fu">element_text</span>()) <span class="sc">+</span></span>
+<span id="cb139-11"><a href="#cb139-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> state_colors)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 25244 rows containing missing values or values outside the scale range
+(`geom_point()`).
+Removed 25244 rows containing missing values or values outside the scale range
+(`geom_point()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="DynaPrism_files/figure-html/scatter_plots-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

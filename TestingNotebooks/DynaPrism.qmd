@@ -1,0 +1,896 @@
+---
+title: "DynaPrism"
+format: html
+editor: visual
+---
+
+# 0. Environment Set-Up
+
+```{r}
+#| label: bp-libraries
+library(snowfall)
+library(gplots)
+library(BiocParallel)
+library(scran)
+library(stats)
+library(utils)
+library(NMF)
+library(Matrix)
+```
+
+```{r}
+#| label: libraries
+library(SingleCellExperiment)
+```
+
+
+```{r}
+#| label: bp-functions
+source("../BayesPrism/R/classes.R")
+source("../BayesPrism/R/new_prism.R")
+source("../BayesPrism/R/run_prism.R")
+source("../BayesPrism/R/run_gibbs.R")
+source("../BayesPrism/R/JointPost_functions.R")
+source("../BayesPrism/R/update_reference.R")
+source("../BayesPrism/R/optim_functions_MAP.R")
+```
+
+```{r}
+#| label: functions
+source("../R/Omega_tensor.R")
+```
+
+```{r}
+#| label: global_variables
+data_dir <- "../data/"
+dir.exists(data_dir)
+```
+
+# 1. Loading Data
+```{r}
+#| label: blk_load
+#| output: false
+#| warning: false
+blk <- DeconvoBuddies::fetch_deconvo_data("rse_gene")
+```
+
+```{r}
+#| label: load_qc
+load(paste0(data_dir, "NotebookRData/DynaPrism/", "sce.rdata"))
+```
+
+Getting lists of cell types and cell states.
+
+```{r}
+#| label: cell_lists
+sce$cellType_hc <- droplevels(sce$cellType_hc)
+sce$cellType_broad_hc <- droplevels(sce$cellType_broad_hc)
+cell_types <- unique(as.vector(sce$cellType_broad_hc))
+cell_states <- unique(as.vector(sce$cellType_hc))
+```
+
+# 2. Omega tensor
+
+```{r}
+load(paste0(data_dir, "NotebookRData/DynaPrism/", "Omega.rdata"))
+load(paste0(data_dir, "NotebookRData/DynaPrism/", "Weighted_Omega.rdata"))
+```
+
+# 2. BayesPrism
+
+## 2.1 New Prism
+
+```{r}
+#| label: sample_vars
+br_num = "Br2720"
+position = "post"
+sample = paste0(br_num,"_",position)
+```
+
+```{r}
+#| label: new_prism
+#| eval: false
+rownames(blk) <- rowData(blk)$Symbol
+blk_sample = blk[intersect(rownames(sce), rownames(blk)),blk$Sample==sample]
+
+myPrism <- new.prism(
+  reference=t(as.matrix(counts(sce))), 
+  mixture=t(assay(blk_sample)),
+  input.type="count.matrix", 
+  cell.type.labels = sce$cellType_broad_hc, 
+  cell.state.labels = sce$cellType_hc,
+  key = NULL,
+  outlier.cut=0.01,
+    outlier.fraction=0.1,
+)
+save(myPrism, file=paste0(data_dir, "NotebookRData/DynaPrism/", "myPrism_", sample, ".rdata"))
+```
+
+```{r}
+#| label: load_new_prism
+load(paste0(data_dir, "NotebookRData/DynaPrism/", "myPrism_", sample, ".rdata"))
+```
+
+## 2.2 Run BayesPrism
+
+```{r}
+#| label: bayesprism
+#| eval: false
+bp_res <- run.prism(prism = myPrism, n.cores=14)
+save(bp_res, file=paste0(data_dir, "NotebookRData/DynaPrism/", "bp_res_", sample, ".rdata"))
+```
+
+```{r}
+#| label: load_bp_res
+load(paste0(data_dir, "NotebookRData/DynaPrism/", "bp_res_", sample, ".rdata"))
+```
+### 2.2.1 Functions
+
+```{r}
+#| label: gibbsSampler_class
+#' An S4 class to represent the input, X, phi; alpha and controls of Gibbs sampling 
+#'
+#' @slot phi an array of dimension K*G to denote reference matrix
+#' @slot X a matrix of dimension N*G to denote bulk matrix
+#' @slot theta a matrix of dimension K*N to denote the cell type fraction in each bulk
+#' @slot alpha a numeric value to denote the symmetric Dirichlet prior, fixed to 1E-8 
+#' @slot gibbs.control a list containing parameters of the Gibbs sampler
+setClass("gibbsSamplerOmega",
+         slots = c(
+           reference = "reference",
+           X = "matrix",
+           Omega = "array",
+           gibbs.control = "list"
+         ),
+         prototype = list(
+           reference = NULL,
+           X = matrix(),
+           gibbs.control = list(chain.length = NULL,
+           					    burn.in = NULL,
+           					    thinning = NULL,
+           					    n.cores = NULL,
+           					    seed = NULL,
+           					    alpha = NULL, 
+           					    beta = NULL)
+         ),
+         validity = function(object){
+         	errors <- character()
+  			
+  			if(is(object@reference, "refPhi"))
+  				ref.gene <- colnames(object@reference@phi)
+  			if(is(object@reference, "refTumor"))
+  				ref.gene <- colnames(object@reference@psi_mal)
+  			
+  			if(!identical(ref.gene, colnames(object@X))){
+  				msg <- paste("Gene names do not match")
+  				errors <- c(errors, msg)
+  			}
+  			  											
+         	if (length(errors) == 0) TRUE else errors
+         }
+)
+```
+
+```{r}
+#' An S4 class to represent the output of run.prism
+#'
+#' @slot input.initial.cellState an S4 object of class gibbsSampler 
+#'		to store the input of initial Gibbs sampling over cell states 
+#' @slot posterior.initial.cellState an S4 object of class jointPost 
+#'		to store the results of initial Gibbs sampling over cell states
+#' @slot posterior.initial.cellType an S4 object of class jointPost 
+#'		to store the results over cell types merged from posterior.initial.cellState
+#' @slot reference.update an S4 object of class reference 
+#'		to store the updated reference
+#' @slot posterior.theta_f matrix to represent the cell type fraction from the final Gibbs sampling
+#' @slot control_param a list to store all 
+#'
+#' @export
+setClass("BayesPrismOmega",
+         slots = c(
+           prism = "prism",
+           Omega = "array",
+           posterior.initial.cellState = "jointPost",
+           posterior.initial.cellType = "jointPost",
+           reference.update = "reference",
+           posterior.theta_f = "theta_f",
+           control_param = "list"
+         ),
+         prototype = list(
+           prism = new("prism"),
+           posterior.initial.cellState = new("jointPost"),
+           posterior.initial.cellType = new("jointPost"),
+           reference.update = NULL,
+           posterior.theta_f = NULL,
+           control_param = list(gibbs.control = list(chain.length = NULL,
+           					    					  burn.in = NULL,
+           					    					  thinning = NULL,
+           					    					  n.cores = NULL,
+           					    					  seed = NULL,
+           					    					  alpha=NULL,
+           					    					  beta = NULL),
+					  				opt.control = list(trace = NULL, 
+					  								    maxit = NULL,
+					  								    optimizer = NA_character_, 
+					  								    n.cores = NULL),
+					  				map = list(),
+					  				key = NA_character_,
+					  				update.gibbs = logical())
+         )
+)
+```
+
+```{r}
+#| label: valid.gibbs.control_function
+#' function to validate gibbs.control
+#' @param control a named list of parameters required to control optimization  
+valid.gibbs.control.Omega <- function(control){
+	ctrl <- list(chain.length=1000, burn.in=500, thinning=2, n.cores=1, seed=123, alpha=1, beta = 0.4)
+	namc <- names(control)
+	
+	if (!all(namc %in% names(ctrl)))
+        stop("unknown names in gibbs.control: ", namc[!(namc %in% names(ctrl))])
+    ctrl[namc] <- control
+
+	if(ctrl$alpha <0) stop("alpha needs to be positive")
+  if(ctrl$beta <0) stop("beta needs to be positive")
+	
+	return(ctrl)
+}
+```
+
+
+```{r}
+#| label: function_run.prism
+
+#' main function to run deconvolution using BayesPrism
+#' @param n.cores number of cores to use. Default =1.
+#'		If needs to set different number of cores for Gibbs sampling and optimization,
+#'		supply n.cores in gibbs.control and/or opt.control
+#' @param update.gibbs a logical variable to denote whether run final Gibbs sampling to update theta
+#' @param gibbs.control a list containing parameters of the Gibbs sampler
+#'		chain.length: length of MCMC chain. Default=1000;
+#'		burn.in: length of burn in period. Default=500;
+#'		thinning: retain every # of MCMC samples after the burn in period to reduce auto-correlation. Default=2;
+#'		n.cores: number of cores to use. Default uses n.cores in the main argument.
+#'		seed: seed number to use for repoducibility. Default = 123. set to NULL if use pseudo random.
+#'		alpha: a numeric vector to represent the parameter of dirichlet distribution. Default=1. (1E-8 may yield theta=0 due to underflow. causes issue when psuedo.min=0) 
+#'		beta: a numeric vector to represent the strength of the interatcion term
+#' @param opt.control a list containing parameters for the optimization step:
+#'		maxit: maximum number of cycles to interate. Default=100000
+#'		sigma: hyper-parameter of the prior if optimizer="MAP". Default=2.
+#'		optimizer a character string to denote which algorithm to use
+#'			"MAP": the one used by the BayesPrism paper, with cell type-specific gamma under a log-normal prior 
+#'			"MLE": the new algorithm that models a single gamma across cell types. Useful when some cell types are low in Z_k, e.g. spatial data
+#'	 		default to "MAP"
+#' @export
+run.prism.Omega <- function(prism,
+                            Omega,
+                            n.cores=1,
+                            update.gibbs=TRUE,
+                            gibbs.control=list(),
+                            opt.control=list()
+                            ){
+	
+	if(! "n.cores" %in% names(gibbs.control)) gibbs.control$n.cores <- n.cores
+	if(! "n.cores" %in% names(opt.control)) opt.control$n.cores <- n.cores
+	stopifnot(is.logical(update.gibbs) & length(update.gibbs)==1)
+	stopifnot(is.numeric(n.cores) & length(n.cores)==1)
+	
+	opt.control <- valid.opt.control(opt.control)
+	gibbs.control <- valid.gibbs.control.Omega(gibbs.control)
+	
+	if(prism@phi_cellState@pseudo.min==0) 
+		gibbs.control$alpha <- max(1, gibbs.control$alpha)
+	
+	#write mixture to disk and load each X_n to the corresponding node to save memory
+	tmp.dir <- tempdir(check=TRUE)
+	for(n in 1:nrow(prism@mixture)) {
+		X_n <- prism@mixture[n,]
+		file.name <- paste(tmp.dir, "/mixture_",n,".rdata",sep="")
+		save(X_n, file= file.name)
+	}
+			
+	#sampling cell states (cs)
+	gibbsSampler.ini.cs <- new("gibbsSamplerOmega",
+								reference = prism@phi_cellState,
+								X = prism@mixture,
+								Omega = Omega,
+								gibbs.control = gibbs.control)
+
+	jointPost.ini.cs <- run.gibbs.Omega(gibbsSampler.ini.cs, Omega,
+								  final=FALSE)
+
+	#merge over cell states to get cell type (ct) info
+	jointPost.ini.ct <- mergeK(jointPost.obj = jointPost.ini.cs, 
+					   		   			 map = prism@map)
+
+	if(!update.gibbs) #only do initial Gibbs sampling
+		bp.obj <- new("BayesPrismOmega",
+		              prism = prism,
+		              Omega = Omega,
+		              posterior.initial.cellState = jointPost.ini.cs,
+		              posterior.initial.cellType = jointPost.ini.ct,
+		              control_param = list(gibbs.control = gibbs.control, 
+		                                   opt.control = opt.control,
+		                                   update.gibbs = update.gibbs)
+		              )
+	else{
+		#contruct the new gibbsSampler object with updated reference
+		psi <- updateReference (Z = jointPost.ini.ct@Z,
+								phi_prime = prism@phi_cellType,
+								map = prism@map,
+								key = prism@key,
+								opt.control = opt.control)
+	
+		gibbsSampler.update <- new("gibbsSampler",
+									reference = psi,
+									X = prism@mixture,
+									gibbs.control = gibbs.control)
+		
+		theta_f <- run.gibbs(gibbsSampler.update, 
+							 final=TRUE)
+		
+		bp.obj <- new("BayesPrismOmega",
+		              prism = prism,
+		              Omega = Omega,
+		              posterior.initial.cellState = jointPost.ini.cs,
+		              posterior.initial.cellType = jointPost.ini.ct,
+		              reference.update = psi,
+		              posterior.theta_f = theta_f,
+		              control_param = list(gibbs.control = gibbs.control, 
+		                                   opt.control = opt.control,
+		                                   update.gibbs = update.gibbs)
+         			 )
+	}
+	
+	unlink(tmp.dir, recursive = TRUE)
+	
+	return(bp.obj) 		
+}
+```
+
+```{r}
+#‘ function used to estimate run time of Gibbs sampling (print to console)
+#' @param gibbsSampler.obj a gibbsSampler object
+#' @param final a logical variable denote whether report only updated theta_f (final =TRUE)
+#' @param chain.length length of MCMC chain used to simulate. Default=50.
+estimate.gibbs.time.Omega <- function(gibbsSampler.obj,
+								final, 
+								chain.length=50){
+	
+	ref <- gibbsSampler.obj@reference
+	X <- gibbsSampler.obj@X
+	gibbs.control <- gibbsSampler.obj@gibbs.control
+	
+	ptm <- proc.time()
+	
+	if(!final){
+		#initial Gibbs
+		sample.Z.theta_n.Omega (X_n = X[1,], 
+								  phi = ref@phi, 
+								  alpha = gibbs.control$alpha,
+								  Omega = gibbsSampler.obj@Omega,
+								  beta = gibbs.control$beta,
+								  gibbs.idx = get.gibbs.idx(
+				     		 	  	list(chain.length = chain.length, 
+				     					 burn.in = chain.length*gibbs.control$burn.in/gibbs.control$chain.length,
+				     					 thinning = gibbs.control$thinning)
+				     		 	  )
+						   )
+	}
+	else{
+		#updated Gibbs
+		if(is(ref,"refPhi")){
+			sample.theta_n (X_n = X[1,], 
+							phi = ref@phi, 
+							alpha = gibbs.control$alpha,
+							gibbs.idx = get.gibbs.idx(
+				     			list(chain.length = chain.length, 
+				     				burn.in = chain.length*gibbs.control$burn.in/gibbs.control$chain.length,
+				     				thinning = gibbs.control$thinning)
+				     		 	 )
+				    			)
+		}
+		if(is(ref,"refTumor")){
+		 	phi_1 <- rbind(ref@psi_mal[1,], ref@psi_env)
+			nonzero.idx <- apply(phi_1,2,max)>0
+		 	sample.theta_n (X_n = X[1,nonzero.idx, drop=F], 
+							phi = phi_1[, nonzero.idx, drop=F], 
+							alpha = gibbs.control$alpha,
+							gibbs.idx = get.gibbs.idx(
+				     			list(chain.length = chain.length, 
+				     				 burn.in = chain.length*gibbs.control$burn.in/gibbs.control$chain.length,
+				     				 thinning = gibbs.control$thinning)
+				     		 	)
+				    			)	
+		}	
+	}
+	
+	total.time <- proc.time() - ptm
+	total.time <- as.numeric(total.time["elapsed"])
+	
+	# seems to underestimate when transferring data comsumes large amount of time (spatial data)
+	estimated.time <- gibbs.control $chain.length / chain.length * total.time * ceiling(nrow(X) / gibbs.control$n.cores) *2 		
+	current.time <- Sys.time()
+	
+	cat("Current time: ", as.character(current.time), "\n")
+	cat("Estimated time to complete: ", my_seconds_to_period(estimated.time), "\n")
+	cat("Estimated finishing time: ", as.character(current.time + estimated.time), "\n")
+
+}
+```
+
+```{r}
+#| label: function_run.gibbs
+
+#' function to run Gibbs sampling 
+#'
+#' @param gibbsSampler.obj, a gibbsSampler object
+#' @param final a logical variable denote whether report only updated theta_f (final=TRUE)
+#' @param if.estimate a logical variable denote whether estimate the run time. Default=TRUE
+#' @import snowfall
+#' @return a gibbsSampler object with Z and theta entries, if final=FALSE,  or theta_f matrix if final=TRUE
+run.gibbs.Omega <- function(gibbsSampler.obj, 
+                            Omega,
+                            final,
+                            if.estimate=TRUE,
+                            compute.elbo=FALSE
+                            ){
+	
+	if(final) cat("Run Gibbs sampling using updated reference ... \n")
+	else cat("Run Gibbs sampling... \n")
+
+	if(if.estimate)
+		estimate.gibbs.time.Omega(gibbsSampler.obj = gibbsSampler.obj, 
+							final = final)
+	
+	if(is(gibbsSampler.obj@reference,"refPhi")) {
+		if(!final) return(run.gibbs.refPhi.ini.Omega(gibbsSampler.obj = gibbsSampler.obj, 
+		                                             Omega = Omega,
+		                                             compute.elbo = compute.elbo))
+		else return(run.gibbs.refPhi.final(gibbsSampler.obj = gibbsSampler.obj, 
+		                                   compute.elbo = compute.elbo))
+	}
+	if(is(gibbsSampler.obj@reference,"refTumor")) {
+		return(run.gibbs.refTumor(gibbsSampler.obj = gibbsSampler.obj))	
+	}
+}
+```
+
+```{r}
+#| label: function_run.gibbs.refPhi.ini
+
+#' function to run initial Gibbs sampling if reference is of the class refPhi
+#'
+#' @param gibbsSampler.obj, a gibbsSampler object
+#' @import snowfall
+#' @return a jointPost object with Z and theta entries 
+run.gibbs.refPhi.ini.Omega <- function(gibbsSampler.obj,
+                                       Omega,
+                                       compute.elbo){
+	
+	phi <- gibbsSampler.obj@reference@phi
+	X <- gibbsSampler.obj@X
+	gibbs.control <- gibbsSampler.obj@gibbs.control
+	alpha <- gibbs.control$alpha
+	beta <- gibbs.control$beta
+	
+	gibbs.idx <- get.gibbs.idx(gibbs.control)
+	seed <- gibbs.control$seed
+
+	##### LOOK INTO THESE
+	sample.Z.theta_n.Omega <- sample.Z.theta_n.Omega
+	rdirichlet <- BayesPrism:::rdirichlet
+	
+	cat("Start run... \n")
+	
+	if(gibbs.control$n.cores>1){	
+		#parallel using snowfall	
+		sfInit(parallel = TRUE, cpus = gibbs.control$n.cores, type = "SOCK" )
+					
+		cpu.fun <- function(n) {
+			if(!is.null(seed)) set.seed(seed)
+			#load nth mixture from disk
+			file.name.X_n <- paste(tmp.dir, "/mixture_",n,".rdata",sep="")
+			load(file.name.X_n)
+			
+			sample.Z.theta_n.Omega (X_n = X_n, 
+							  phi = phi, 
+							  alpha = alpha, 
+							  Omega = Omega,
+							  beta = beta,
+							  gibbs.idx = gibbs.idx, 
+							  compute.elbo = compute.elbo)		
+		}
+		tmp.dir <- tempdir(check=TRUE)
+		sfExport("phi", "alpha", "Omega", "beta", "gibbs.idx", "seed", 
+				 	"compute.elbo", "sample.Z.theta_n.Omega","rdirichlet","tmp.dir")
+		environment(cpu.fun) <- globalenv()
+		gibbs.list <- sfLapply( 1:nrow(X), cpu.fun)
+		sfStop()
+	}
+	else{
+		#single thread
+		cpu.fun <- function(n) {
+				if(!is.null(seed)) set.seed(seed)
+				cat(n," ")
+				sample.Z.theta_n.Omega (X_n = X[n,], 
+				                        phi = phi,
+				                        alpha = alpha, 
+				                        Omega = Omega,
+				                        alpha = alpha,
+				                        gibbs.idx = gibbs.idx,
+				                        compute.elbo = compute.elbo)
+		}
+		gibbs.list <- lapply( 1:nrow(X), cpu.fun)
+		cat("\n")
+	}
+	
+	jointPost <- newJointPost(bulkID = rownames(X),
+							  geneID = colnames(X), 
+							  cellType = rownames(phi),
+							  gibbs.list = gibbs.list )
+	return(jointPost)
+}
+```
+
+
+```{r}
+#| label: function_sample.Z.theta_n
+
+#' function to run Gibbs sampling for Z and theta on each bulk
+#' @param X_n a numeric vector of reads count of the nth bulk sample
+#' @param phi an array of dimension K*G to denote reference matrix
+#' @param alpha a numeric value to denote the symmetric Dirichlet prior 
+#' @param gibbs.idx a numeric vector to denote the index of samples to be retained from MCMC chain
+#' @param compute.elbo a logical variable to denote if compute ELBO. Default=FALSE.
+#' return a list containing the posterior mean of Z_n and theta_n
+sample.Z.theta_n.Omega <- function(X_n, 
+				        	 	 phi,
+				        	 	alpha,
+				        	 	Omega, 
+				        	 	beta,
+				        	 	gibbs.idx,
+				        	 	compute.elbo=FALSE){
+		
+  # Setting up Omega implementatiom
+	K_names <- rownames(phi) # # of Sender States
+	S_names <- rownames(phi) # # of Receiver States
+	G_names <- colnames(phi) # # of Genes
+	G_shared_idx <- which(colnames(phi) %in% dimnames(Omega)$Gene)
+	
+	K_dim <- length(K_names)
+	S_dim <- length(S_names)
+	G_dim <- length(G_names)
+		
+	theta_n.i <- rep(1/S_dim, S_dim)
+	Z_n.i <- array(NA,c(G_dim,S_dim))
+	
+	Z_n.sum <- array(0,c(G_dim,S_dim))
+	theta_n.sum <- rep(0, S_dim)
+	theta_n2.sum <- rep(0, S_dim)
+	
+	#variable for computing ELBO
+	multinom.coef <- 0
+	
+	# 
+	phi_mat <- as.matrix(phi)
+	X_vec <- as.numeric(X_n[G_names])
+	
+	# Making Omega flat
+	Omega_flat <- matrix(Omega[K_names, S_names, G_shared_idx], nrow = S_dim, ncol = S_dim * length(G_shared_idx))
+
+	for(i in 1:max(gibbs.idx)){
+	  
+	  niche_pressure_vec <- as.numeric(theta_n.i %*% Omega_flat)
+	  niche_pressure_mat <- matrix(niche_pressure_vec, nrow = S_dim, ncol = length(G_shared_idx))
+	  niche_pressure_mat <- (niche_pressure_mat) / sd(niche_pressure_mat)
+	
+		#sample Z for patient n
+	  prob.mat <- (phi_mat * theta_n.i)
+	  prob.mat[,G_shared_idx] <- prob.mat[,G_shared_idx] * exp(beta * niche_pressure_mat)
+
+	  for (g in 1:G_dim) {
+	    Z_n.i[g,] <- rmultinom(n = 1, size = X_vec[g], prob = prob.mat[, g])
+	    }
+		# sample theta for patient n
+		Z_nk.i <- colSums(Z_n.i) #total count for each cell type
+		theta_n.i <- rdirichlet(alpha = Z_nk.i + alpha)
+				
+		if(i %in% gibbs.idx) {
+			#collect sample and compute posterior sum
+			Z_n.sum <- Z_n.sum + Z_n.i
+			theta_n.sum <- theta_n.sum + theta_n.i
+			theta_n2.sum <- theta_n2.sum + theta_n.i^2
+			
+			if(compute.elbo){
+				# multinom.coef.i <- sum((alpha-1) * log(theta_n.i), na.rm=TRUE) + 
+								   # sum(Z_nk.i * log(theta_n.i), na.rm=TRUE) - 
+								   # sum(lfactorial(Z_nk.i)) - sum(lfactorial(Z_n.i))
+				multinom.coef.i <- sum(lfactorial(Z_nk.i)) - sum(lfactorial(Z_n.i))
+				multinom.coef <- multinom.coef + multinom.coef.i
+				
+			}	
+		}
+		
+		if((i %% 50) == 0) gc()
+	}
+	
+	samples.size <- length(gibbs.idx)
+	#gibbs.constant <- multinom.coef + z.logtheta + theta.dirichlet.alpha
+	
+	Z_n <- Z_n.sum / samples.size
+	theta_n <- theta_n.sum / samples.size
+	theta.cv_n <- sqrt(theta_n2.sum / samples.size - (theta_n^2)) / theta_n
+	gibbs.constant <- multinom.coef / samples.size
+		
+	return(list(Z_n = Z_n, 
+			    theta_n = theta_n,
+			    theta.cv_n = theta.cv_n,
+			    gibbs.constant = gibbs.constant))
+}
+```
+
+### 2.2.2 Running
+```{r}
+#| label: running_dynaprism
+dp_res <- run.prism.Omega(prism = myPrism, Omega = Omega, n.cores=6)
+```
+
+
+### 2.2.3 Experiments
+```{r}
+#| label: defining_sample
+sample_blk <- "AN00000904_Br2720_Post_Bulk"
+X_n <- myPrism@mixture[sample_blk, ]
+```
+
+
+```{r}
+#| label: gibbs_loop
+#| eval: false
+
+beta <- 0.4
+alpha <- 1
+
+gibbs.control <- valid.gibbs.control(list(n.cores = 14, chain.length = 1000))
+gibbs.idx <- get.gibbs.idx(gibbs.control)
+
+# --- PRE-COMPUTATION (Run once per sample) ---
+K_names <- rownames(phi)
+S_names <- rownames(phi)
+G_names <- colnames(phi)
+G_shared_idx <- which(G_names %in% dimnames(Omega)$Gene)
+# Convert to pure numerical matrices (removes overhead of names/attributes)
+phi_mat <- as.matrix(phi)
+X_vec <- as.numeric(X_n[G_names])
+K_dim <- length(K_names)
+S_dim <- length(S_names)
+G_dim <- length(G_names)
+
+# Flatten Omega: [Sender] x [Receiver * Gene]
+# This makes calculating Niche Pressure a single matrix multiplication
+Omega_flat <- matrix(Omega[K_names, S_names, G_names[G_shared_idx]], nrow = S_dim, ncol = S_dim * length(G_shared_idx))
+
+# Initialize variables
+theta_n.i <- rep(1/S_dim, S_dim)
+Z_n.i <- matrix(0, nrow = G_dim, ncol = S_dim)
+Z_n.sum <- matrix(0, nrow = G_dim, ncol = S_dim)
+rownames(Z_n.sum) <- G_names
+colnames(Z_n.sum) <- S_names
+theta_n.sum <- rep(0, S_dim)
+names(theta_n.sum) <- S_names
+theta_n2.sum <- rep(0, S_dim)
+names(theta_n2.sum) <- S_names
+
+t.sum <- 0
+# --- START OF OPTIMIZED LOOP ---
+for(i in 1:max(gibbs.idx)){
+  ti <- proc.time()["elapsed"]
+  
+  # 1. CALCULATE NICHE PRESSURE (High Speed %*%)
+  # This calculates sum_k (theta_k * Omega_ksg) for all s and g in one shot
+  niche_pressure_vec <- as.numeric(theta_n.i %*% Omega_flat)
+  niche_pressure_mat <- matrix(niche_pressure_vec, nrow = S_dim, ncol = length(G_shared_idx))
+  niche_pressure_mat <- (niche_pressure_mat) / sd(niche_pressure_mat)
+  
+  # 2. VECTORIZED PROBABILITY MATRIX
+  # We use the fact that (phi * theta) is a column-wise scaling
+  # and exp(beta * niche) is element-wise
+  prob.mat <- (phi_mat * theta_n.i)
+  prob.mat[,G_shared_idx] <- prob.mat[,G_shared_idx] * exp(beta * niche_pressure_mat)
+  
+  # 3. THE SAMPLING LOOP (The bottleneck)
+  # Optimization: Use an integer loop and avoid any names
+  for (g in 1:G_dim) {
+    # size is the total bulk count for gene g
+    Z_n.i[g,] <- rmultinom(n = 1, size = X_vec[g], prob = prob.mat[, g])
+  }
+  
+  # 4. UPDATE THETA
+  Z_nk.i <- colSums(Z_n.i)
+  theta_n.i <- rdirichlet(Z_nk.i + alpha)
+  
+  # 5. ACCUMULATE
+  if(i %in% gibbs.idx) {
+    Z_n.sum <- Z_n.sum + Z_n.i
+    theta_n.sum <- theta_n.sum + theta_n.i
+    theta_n2.sum <- theta_n2.sum + theta_n.i^2
+  }
+  
+  tt <- proc.time()["elapsed"] - ti
+  t.sum <- t.sum + tt
+  if((i %% 50) == 0){
+    cat("\r",i,"/",max(gibbs.idx))
+    cat(": ",t.sum/60, " min elapsed. ", (t.sum/i)*(max(gibbs.idx)-i)/60, " min Remaining.",  "\n")
+    gc()
+    }
+}
+```
+
+```{r}
+#| label: gibbs_results
+#| eval: false
+samples.size <- length(gibbs.idx)
+	#gibbs.constant <- multinom.coef + z.logtheta + theta.dirichlet.alpha
+	
+Z_n <- Z_n.sum / samples.size
+theta_n <- theta_n.sum / samples.size
+theta.cv_n <- sqrt(theta_n2.sum / samples.size - (theta_n^2)) / theta_n
+#gibbs.constant <- multinom.coef / samples.size
+```
+
+# Visualizing
+
+```{r}
+#| label: color_dicts
+library(ggalign)
+library(ggplot2)
+
+library(scales)
+library(colorspace)
+
+type_colors <- c(
+  Inhib = "#369acc", 
+  Oligo = "#f8e16f", 
+  OPC = "#6c584c", 
+  Excit = "#95cf92", 
+  Astro = "#9656a2", 
+  EndoMural = "#f4895f", 
+  Micro = "#de324c"
+)
+
+state_colors <- unlist(lapply(names(bp_res@prism@map), function(cell_type) {
+  states <- bp_res@prism@map[[cell_type]]
+  base_col <- type_colors[cell_type]
+  
+  shades <- colorRampPalette(c(lighten(base_col, 0.4), darken(base_col, 0.4)))(length(states))
+  
+  names(shades) <- states
+  return(shades)
+}))
+```
+```{r}
+state_to_type <- stack(bp_res@prism@map)
+colnames(state_to_type) <- c("cell_state", "cell_type")
+```
+
+
+```{r}
+#| label: true_frac
+sce_frac <- table(colData(sce)[sce$Sample == sample,]$cellType_hc)/sum(table(colData(sce)[sce$Sample == sample,]$cellType_hc))
+
+frac_df <- as.data.frame(sce_frac)
+colnames(frac_df) <- c("cell_state", "Proportion")
+
+frac_df$Sample <- "sn-ref"
+```
+
+```{r}
+#| label: bp_frac
+bp_frac <- as.table(bp_res@posterior.initial.cellState@theta[sample_blk,])
+
+bp_df <- as.data.frame(bp_frac)
+colnames(bp_df) <- c("cell_state", "Proportion")
+
+bp_df$Sample <- "BayesPrism"
+```
+
+```{r}
+#| label: dp_frac
+interac_frac <- as.table(dp_res@posterior.initial.cellState@theta[sample_blk,])
+
+interac_df <- as.data.frame(interac_frac)
+colnames(interac_df) <- c("cell_state", "Proportion")
+
+interac_df$Sample <- paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ")")
+```
+
+```{r}
+#| label: frac_plot
+df_theta <- rbind(frac_df, interac_df, bp_df)
+df_theta$cell_type <- state_to_type$cell_type[match(df_theta$cell_state, state_to_type$cell_state)]
+
+# 2. Plot using your colors
+ggplot(df_theta, aes(y = Sample, x = Proportion, fill = cell_type)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = type_colors) +
+  theme_minimal()
+```
+```{r}
+#| label: true_exp
+true_exp_mtx <- matrix(nrow = length(cell_states), 
+                       ncol = length(rownames(sce)),
+                       dimnames = list(cell_states, rownames(sce)))
+
+for (s in cell_states){
+  s_idx <- colnames(sce)[sce$cellType_hc == s & sce$Sample == sample]
+  true_rec_exp <- rowSums(as.matrix(counts(sce[colnames(true_exp_mtx), s_idx])))
+  true_exp_mtx[s, ] <- true_rec_exp
+}
+
+true_exp_mtx <- t(true_exp_mtx)
+
+bp_mtx <- bp_res@posterior.initial.cellState@Z[sample_blk, , ]
+dp_mtx <- dp_res@posterior.initial.cellState@Z[sample_blk, , ]
+
+true_cpm_mtx <- t(t(true_exp_mtx)/colSums(true_exp_mtx)) * 1e6
+Z_cpm <- t(t(dp_mtx)/colSums(dp_mtx)) * 1e6
+bp_cpm <- t(t(bp_mtx)/colSums(bp_mtx)) * 1e6
+```
+
+```{r}
+#| label: Z_df
+
+G_names <- rownames(dp_mtx)
+S_names <- colnames(dp_mtx)
+
+G_dim <- length(G_names)
+S_dim <- length(S_names)
+
+Z_df <- data.frame(
+  gene = rep(G_names, times = S_dim),
+  cell_state = rep(S_names, each = G_dim),
+  True = as.vector(true_cpm_mtx[G_names, S_names]),
+  BayesPrism = as.vector(bp_cpm[G_names, S_names]),
+  DynaPrism = as.vector(Z_cpm[G_names, S_names])
+)
+
+Z_df$cell_type <- state_to_type$cell_type[match(Z_df$cell_state, state_to_type$cell_state)]
+```
+
+```{r}
+#| label: corrs
+plot_df <- Z_df[#Z_df$True != 0
+                #& !Z_df$cell_type %in% c("Excit_11", "Excit_12")
+                , ]
+
+cor.test((plot_df$DynaPrism), plot_df$True, method="spearman")
+cor.test((plot_df$BayesPrism), plot_df$True, method="spearman")
+
+dp_mae <- mean(abs(plot_df$True-plot_df$DynaPrism), na.rm = TRUE)
+bp_mae <- mean(abs(plot_df$True-plot_df$BayesPrism), na.rm = TRUE)
+
+cat(paste0("DynaPrism MAE: ", dp_mae), "\n")
+cat(paste0("BayesPrism MAE: ", bp_mae))
+```
+
+
+```{r}
+#| label: scatter_plots
+
+stack_continuoush(plot_df) +
+  ggalign(mapping = aes(x = DynaPrism, y = True, color = cell_state)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0) +
+  theme(axis.text.y = element_text()) +
+  scale_color_manual(values = state_colors) +
+  ggalign(mapping = aes(x = BayesPrism, y = True, color = cell_state)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0) +
+  theme(axis.text.y = element_text()) +
+  scale_color_manual(values = state_colors)
+```
+
+
