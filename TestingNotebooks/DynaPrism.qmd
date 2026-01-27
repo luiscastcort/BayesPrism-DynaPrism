@@ -21,6 +21,11 @@ library(Matrix)
 ```{r}
 #| label: libraries
 library(SingleCellExperiment)
+library(ggalign)
+library(ggplot2)
+
+library(RColorBrewer)
+library(colorspace)
 ```
 
 
@@ -67,7 +72,51 @@ sce$cellType_hc <- droplevels(sce$cellType_hc)
 sce$cellType_broad_hc <- droplevels(sce$cellType_broad_hc)
 cell_types <- unique(as.vector(sce$cellType_broad_hc))
 cell_states <- unique(as.vector(sce$cellType_hc))
+
+type_to_state <- lapply(cell_types,function(t)unique(as.vector(sce$cellType_hc[sce$cellType_broad_hc==t])))
+names(type_to_state) <- cell_types
+
+state_to_type <- stack(type_to_state)
+colnames(state_to_type) <- c("cell_state", "cell_type")
+
 ```
+
+Color dictionaries for graphs
+
+```{r}
+#| label: color_dicts
+type_colors <- c(
+  Inhib = "#369acc", 
+  Oligo = "#f8e16f", 
+  OPC = "#6c584c", 
+  Excit = "#95cf92", 
+  Astro = "#9656a2", 
+  EndoMural = "#f4895f", 
+  Micro = "#de324c"
+)
+
+#type_colors <- setNames(brewer.pal(length(type_to_state), "Set3"), names(type_to_state))
+
+state_colors <- unlist(lapply(names(type_to_state), function(ct) {
+  states <- type_to_state[[ct]]
+  n <- length(states)
+  base <- type_colors[ct]
+  
+  if (n == 1) return(setNames(base, states))
+  
+  pal_func <- colorRampPalette(c(
+    lighten(base, 0.3), 
+    base, 
+    darken(base, 0.3)
+  ))
+  
+  return(setNames(pal_func(n), states))
+}))
+
+#scales::show_col(type_colors)
+#scales::show_col(state_colors)
+```
+
 
 # 2. Omega tensor
 
@@ -91,11 +140,11 @@ sample = paste0(br_num,"_",position)
 #| label: new_prism
 #| eval: false
 rownames(blk) <- rowData(blk)$Symbol
-blk_sample = blk[intersect(rownames(sce), rownames(blk)),blk$Sample==sample]
+#blk_sample = blk[intersect(rownames(sce), rownames(blk)),blk$Sample==sample]
 
 myPrism <- new.prism(
   reference=t(as.matrix(counts(sce))), 
-  mixture=t(assay(blk_sample)),
+  mixture=t(assay(blk)),
   input.type="count.matrix", 
   cell.type.labels = sce$cellType_broad_hc, 
   cell.state.labels = sce$cellType_hc,
@@ -635,9 +684,15 @@ sample.Z.theta_n.Omega <- function(X_n,
 ### 2.2.2 Running
 ```{r}
 #| label: running_dynaprism
-dp_res <- run.prism.Omega(prism = myPrism, Omega = Omega, n.cores=6)
+#| eval: false
+dp_res <- run.prism.Omega(prism = myPrism, Omega = Omega, n.cores=14)
+save(dp_res, file=paste0(data_dir, "NotebookRData/DynaPrism/", "dp_res.rdata"))
 ```
 
+```{r}
+#| label: loading_dynaprism
+load(paste0(data_dir, "NotebookRData/DynaPrism/", "dp_res.rdata"))
+```
 
 ### 2.2.3 Experiments
 ```{r}
@@ -744,40 +799,6 @@ theta.cv_n <- sqrt(theta_n2.sum / samples.size - (theta_n^2)) / theta_n
 # Visualizing
 
 ```{r}
-#| label: color_dicts
-library(ggalign)
-library(ggplot2)
-
-library(scales)
-library(colorspace)
-
-type_colors <- c(
-  Inhib = "#369acc", 
-  Oligo = "#f8e16f", 
-  OPC = "#6c584c", 
-  Excit = "#95cf92", 
-  Astro = "#9656a2", 
-  EndoMural = "#f4895f", 
-  Micro = "#de324c"
-)
-
-state_colors <- unlist(lapply(names(bp_res@prism@map), function(cell_type) {
-  states <- bp_res@prism@map[[cell_type]]
-  base_col <- type_colors[cell_type]
-  
-  shades <- colorRampPalette(c(lighten(base_col, 0.4), darken(base_col, 0.4)))(length(states))
-  
-  names(shades) <- states
-  return(shades)
-}))
-```
-```{r}
-state_to_type <- stack(bp_res@prism@map)
-colnames(state_to_type) <- c("cell_state", "cell_type")
-```
-
-
-```{r}
 #| label: true_frac
 sce_frac <- table(colData(sce)[sce$Sample == sample,]$cellType_hc)/sum(table(colData(sce)[sce$Sample == sample,]$cellType_hc))
 
@@ -862,7 +883,7 @@ Z_df$cell_type <- state_to_type$cell_type[match(Z_df$cell_state, state_to_type$c
 
 ```{r}
 #| label: corrs
-plot_df <- Z_df[#Z_df$True != 0
+plot_df <- Z_df[Z_df$True != 0
                 #& !Z_df$cell_type %in% c("Excit_11", "Excit_12")
                 , ]
 
@@ -893,4 +914,322 @@ stack_continuoush(plot_df) +
   scale_color_manual(values = state_colors)
 ```
 
+# 3. Cross-sample comparisons
+
+## 3.1 State
+
+```{r}
+samples <- intersect(unique(sce$Sample), unique(blk$Sample))
+blk_smp_ids <- lapply(samples,function(sample)unique(as.vector(colnames(blk)[blk$Sample==sample])))
+names(blk_smp_ids) <- samples
+
+blk_lib <- as.data.frame(colData(blk)[,c("SAMPLE_ID","library_prep", "library_type")])
+rownames(blk_lib) <- NULL
+colnames(blk_lib) <- c("ID","library_prep", "library_type")
+
+true_s_df <- data.frame(
+  Source <- NULL,
+  Sample <- NULL,
+  cell_state <- NULL,
+  Proportion <- NULL
+)
+
+bp_s_df <- data.frame(
+  Source <- NULL,
+  Sample <- NULL,
+  ID <- NULL,
+  cell_state <- NULL,
+  Proportion <- NULL
+)
+
+dp_s_df <- data.frame(
+  Source <- NULL,
+  Sample <- NULL,
+  ID <- NULL,
+  cell_state <- NULL,
+  Proportion <- NULL
+)
+
+for (sample in samples) {
+  sc_frac <- table(colData(sce)[sce$Sample == sample,]$cellType_hc)/sum(table(colData(sce)[sce$Sample == sample,]$cellType_hc))
+  sc_df <- as.data.frame(sc_frac)
+  colnames(sc_df) <- c("cell_state", "Proportion")
+  sc_df$Sample <- sample
+  sc_df$Source <- "snRNA-seq"
+  sc_df$ID <- "snRNA-seq"
+  sc_df$library_prep <- "snRNA-seq"
+  sc_df$library_type <- "snRNA-seq"
+  true_s_df <- rbind(true_s_df, sc_df)
+  
+  for (id in blk_smp_ids[[sample]]){
+    bp_frac <- as.table(bp_res@posterior.initial.cellState@theta[id,])
+    blk_bp_df <- as.data.frame(bp_frac)
+    colnames(blk_bp_df) <- c("cell_state", "Proportion")
+    blk_bp_df$Sample <- sample
+    blk_bp_df$ID <- id
+    blk_bp_df$Source <- "BayesPrism"
+    bp_s_df <- rbind(bp_s_df, blk_bp_df)
+    
+    dp_frac <- as.table(dp_res@posterior.initial.cellState@theta[id,])
+    blk_dp_df <- as.data.frame(dp_frac)
+    colnames(blk_dp_df) <- c("cell_state", "Proportion")
+    blk_dp_df$Sample <- sample
+    blk_dp_df$ID <- id
+    blk_dp_df$Source <- "BayesPrism"
+    dp_s_df <- rbind(dp_s_df, blk_dp_df)
+  }
+}
+true_s_df$cell_type <- state_to_type$cell_type[match(true_s_df$cell_state, state_to_type$cell_state)]
+bp_s_df$cell_type <- state_to_type$cell_type[match(bp_s_df$cell_state, state_to_type$cell_state)]
+bp_s_df <- merge(bp_s_df, blk_lib, by = "ID")
+dp_s_df$cell_type <- state_to_type$cell_type[match(dp_s_df$cell_state, state_to_type$cell_state)]
+dp_s_df <- merge(dp_s_df, blk_lib, by = "ID")
+
+true_s_df <- true_s_df[c("Source", "Sample", "ID", "library_prep", "library_type", "cell_type", "cell_state", "Proportion")]
+bp_s_df <- bp_s_df[c("Source", "Sample", "ID", "library_prep", "library_type", "cell_type", "cell_state", "Proportion")]
+dp_s_df <- dp_s_df[c("Source", "Sample", "ID", "library_prep", "library_type", "cell_type", "cell_state", "Proportion")]
+
+full_s_df <- rbind(true_s_df, bp_s_df, dp_s_df)
+```
+
+
+```{r}
+bp_plot <- rbind(true_s_df[true_s_df$Sample == sample, ], bp_s_df[bp_s_df$Sample == sample, ])
+dp_plot <- rbind(true_s_df[true_s_df$Sample == sample, ], dp_s_df[dp_s_df$Sample == sample, ])
+
+ggside(bp_plot, mapping = aes(x = ID, y = Proportion, fill = cell_state)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = state_colors) +
+  labs(y = "BayesPrism") -
+  scale_x_discrete(breaks = NULL, name = NULL) +
+  
+  anno_top(size = 0.2) +
+  ggalign(bp_plot, aes(x = ID, y = 1, fill = library_type)) +
+  geom_tile() +
+  scale_fill_brewer(palette = "Set1") -
+  scale_y_continuous(breaks = NULL, name = NULL) +
+  labs(title = paste0("Estimated cell type fractions for ", sample)) +
+  
+  anno_top() +
+  ggalign(bp_plot, aes(x = ID, y = 1, fill = library_prep)) +
+  geom_tile() +
+  scale_fill_brewer(palette = "Set2") -
+  scale_y_continuous(breaks = NULL, name = NULL) +
+  
+  anno_bottom() +
+  ggalign(dp_plot, mapping = aes(x = ID, y = Proportion, fill = cell_state)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = state_colors) +
+  labs(y = "DynaPrism") 
+```
+
+## 3.2 Type
+
+```{r}
+true_t_df <- data.frame(
+  Source <- NULL,
+  Sample <- NULL,
+  Proportion <- NULL
+)
+
+bp_t_df <- data.frame(
+  Source <- NULL,
+  Sample <- NULL,
+  ID <- NULL,
+  Proportion <- NULL
+)
+
+dp_t_df <- data.frame(
+  Source <- NULL,
+  Sample <- NULL,
+  ID <- NULL,
+  Proportion <- NULL
+)
+
+for (sample in samples) {
+  sc_frac <- table(colData(sce)[sce$Sample == sample,]$cellType_broad_hc)/sum(table(colData(sce)[sce$Sample == sample,]$cellType_broad_hc))
+  sc_df <- as.data.frame(sc_frac)
+  colnames(sc_df) <- c("cell_type", "Proportion")
+  sc_df$Sample <- sample
+  sc_df$Source <- "snRNA-seq"
+  sc_df$ID <- "snRNA-seq"
+  sc_df$library_prep <- "snRNA-seq"
+  sc_df$library_type <- "snRNA-seq"
+  true_t_df <- rbind(true_t_df, sc_df)
+  
+  for (id in blk_smp_ids[[sample]]){
+    #bp_frac <- as.table(bp_res@posterior.theta_f@theta[id,])
+    bp_frac <- as.table(bp_res@posterior.initial.cellType@theta[id,])
+    blk_bp_df <- as.data.frame(bp_frac)
+    colnames(blk_bp_df) <- c("cell_type", "Proportion")
+    blk_bp_df$Sample <- sample
+    blk_bp_df$ID <- id
+    blk_bp_df$Source <- "BayesPrism"
+    bp_t_df <- rbind(bp_t_df, blk_bp_df)
+    
+    #dp_frac <- as.table(dp_res@posterior.theta_f@theta[id,])
+    dp_frac <- as.table(dp_res@posterior.initial.cellType@theta[id,])
+    blk_dp_df <- as.data.frame(dp_frac)
+    colnames(blk_dp_df) <- c("cell_type", "Proportion")
+    blk_dp_df$Sample <- sample
+    blk_dp_df$ID <- id
+    blk_dp_df$Source <- "BayesPrism"
+    dp_t_df <- rbind(dp_t_df, blk_dp_df)
+  }
+}
+bp_t_df <- merge(bp_t_df, blk_lib, by = "ID")
+dp_t_df <- merge(dp_t_df, blk_lib, by = "ID")
+
+true_t_df <- true_t_df[c("Source", "Sample", "ID", "library_prep", "library_type", "cell_type", "Proportion")]
+bp_t_df <- bp_t_df[c("Source", "Sample", "ID", "library_prep", "library_type", "cell_type", "Proportion")]
+dp_t_df <- dp_t_df[c("Source", "Sample", "ID", "library_prep", "library_type", "cell_type", "Proportion")]
+
+full_t_df <- rbind(true_t_df, bp_t_df, dp_t_df)
+```
+
+```{r}
+bp_plot <- rbind(true_t_df[true_t_df$Sample == sample, ], bp_t_df[bp_t_df$Sample == sample, ])
+dp_plot <- rbind(true_t_df[true_t_df$Sample == sample, ], dp_t_df[dp_t_df$Sample == sample, ])
+
+ggside(bp_plot, mapping = aes(x = ID, y = Proportion, fill = cell_type)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = type_colors) +
+  labs(y = "BayesPrism") -
+  scale_x_discrete(breaks = NULL, name = NULL) +
+  
+  anno_top(size = 0.2) +
+  ggalign(bp_plot, aes(x = ID, y = 1, fill = library_type)) +
+  geom_tile() +
+  scale_fill_brewer(palette = "Set1") -
+  scale_y_continuous(breaks = NULL, name = NULL) +
+  labs(title = paste0("Estimated cell type fractions for ", sample)) +
+  
+  anno_top() +
+  ggalign(bp_plot, aes(x = ID, y = 1, fill = library_prep)) +
+  geom_tile() +
+  scale_fill_brewer(palette = "Set2") -
+  scale_y_continuous(breaks = NULL, name = NULL) +
+  
+  anno_bottom() +
+  ggalign(dp_plot, mapping = aes(x = ID, y = Proportion, fill = cell_type)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = type_colors) +
+  labs(y = "DynaPrism") 
+```
+
+```{r}
+#| label: frac_eval_func
+
+library(dplyr)
+library(tidyr)
+
+evaluate_deconvolution <- function(pred_df, true_df) {
+  
+  # 1. Clean and Align Data
+  # We use inner_join to ensure only matching Sample/Cell_Type pairs are compared
+  aligned <- pred_df %>%
+    inner_join(
+      true_df %>% select(Sample, cell_type, Proportion_true = Proportion),
+      by = c("Sample", "cell_type")
+    )
+  
+  # 2. Helper for MAECorr (as defined in your provided formula)
+  calc_maecorr <- function(sub_df) {
+    # Pivot to Sample x CellType matrices
+    E_mat <- sub_df %>%
+      select(Sample, cell_type, Proportion) %>%
+      pivot_wider(names_from = cell_type, values_from = Proportion) %>%
+      select(-Sample) %>% as.matrix()
+    
+    G_mat <- sub_df %>%
+      select(Sample, cell_type, Proportion_true) %>%
+      pivot_wider(names_from = cell_type, values_from = Proportion_true) %>%
+      select(-Sample) %>% as.matrix()
+    
+    # Pearson correlation between samples (t() used because cor() works on columns)
+    P_E <- cor(t(E_mat), method = "pearson", use = "pairwise.complete.obs")
+    P_G <- cor(t(G_mat), method = "pearson", use = "pairwise.complete.obs")
+    
+    return(mean(abs(P_E - P_G), na.rm = TRUE))
+  }
+  
+  # 3. Calculate Sample-wise Spearman (Mean Rho per group)
+  sample_rho <- aligned %>%
+    group_by(library_prep, library_type, Sample) %>%
+    summarize(rho = cor(Proportion, Proportion_true, method = "spearman"), .groups = "drop") %>%
+    group_by(library_prep, library_type) %>%
+    summarize(SCorr = mean(rho, na.rm = TRUE), .groups = "drop")
+  
+  # 4. Calculate Cell-type-wise Spearman (Mean Rho per group)
+  cell_rho <- aligned %>%
+    group_by(library_prep, library_type, cell_type) %>%
+    summarize(rho = cor(Proportion, Proportion_true, method = "spearman"), .groups = "drop") %>%
+    group_by(library_prep, library_type) %>%
+    summarize(CCorr = mean(rho, na.rm = TRUE), .groups = "drop")
+  
+  # 5. Combine everything into Final Metrics
+  final_metrics <- aligned %>%
+    group_by(library_prep, library_type) %>%
+    summarize(
+      MAE = mean(abs(Proportion - Proportion_true), na.rm = TRUE),
+      n_obs = n(),
+      .groups = "drop"
+    ) %>%
+    left_join(sample_rho, by = c("library_prep", "library_type")) %>%
+    left_join(cell_rho, by = c("library_prep", "library_type")) %>%
+    # Calculate MAECorr for each group
+    group_by(library_prep, library_type) %>%
+    group_modify(~ {
+      .x$MAECorr <- calc_maecorr(filter(aligned, 
+                                        library_prep == .y$library_prep, 
+                                        library_type == .y$library_type))
+      return(.x)
+    }) %>%
+    ungroup()
+  
+  return(final_metrics)
+}
+```
+
+```{r}
+# Evaluate both
+bp_results <- evaluate_deconvolution(bp_t_df, true_t_df)
+dp_results <- evaluate_deconvolution(dp_t_df, true_t_df)
+
+# Compare them side-by-side
+comparison <- bind_rows(
+  mutate(bp_results, method = "BayesPrism"),
+  mutate(dp_results, method = "DynaPrism")
+)
+
+comparison
+```
+
+```{r}
+plot_data <- comparison %>%
+  pivot_longer(
+    cols = c(MAE, SCorr, CCorr, MAECorr),
+    names_to = "metric",
+    values_to = "value"
+  )
+
+ggplot(plot_data, aes(x = library_prep, y = value, fill = method)) +
+  # Use dodge to put BayesPrism and DynaPrism side-by-side
+  geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+  # Separate by library_type (polyA vs RiboZero) and Metric
+  facet_grid(metric ~ library_type, scales = "free_y") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1") +
+  labs(
+    title = "Deconvolution Performance Comparison",
+    subtitle = "Comparing BayesPrism vs DynaPrism across Library Preparations",
+    x = "Library Fraction",
+    y = "Metric Value",
+    fill = "Method"
+  ) +
+  theme(
+    strip.background = element_rect(fill = "grey90"),
+    panel.border = element_rect(color = "grey80", fill = NA)
+  )
+```
 
