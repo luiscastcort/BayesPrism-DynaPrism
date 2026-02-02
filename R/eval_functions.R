@@ -99,14 +99,12 @@ eval_frac <- function(inf_frac_mtx, true_frac_mtx, metrics = c("MAE", "SCorr", "
 
 eval_CTSE <- function(inf_exp_tsr, true_exp_tsr, metrics = c("ExpSCorr", "CvSpe", "ExpSpe", "ExpMAE", "ExpRMSE"), markers_list = NULL){
   
-  # 1. FORCED ALIGNMENT - Ensures genes and states are identical across tensors
+  # Ensure genes and states are identical across tensors
   shared_samples <- intersect(dimnames(true_exp_tsr)[[1]], dimnames(inf_exp_tsr)[[1]])
   shared_genes   <- intersect(dimnames(true_exp_tsr)[[2]], dimnames(inf_exp_tsr)[[2]])
   shared_cells   <- intersect(dimnames(true_exp_tsr)[[3]], dimnames(inf_exp_tsr)[[3]])
   
-  message(paste("Aligned Data: Samples:", length(shared_samples), 
-                "| Genes:", length(shared_genes), 
-                "| States:", length(shared_cells)))
+  #message(paste("Aligned Data: Samples:", length(shared_samples), "| Genes:", length(shared_genes), "| States:", length(shared_cells)))
   
   # Subset and CAST to ensure we are working with standard arrays
   E <- inf_exp_tsr[shared_samples, shared_genes, shared_cells]
@@ -135,7 +133,7 @@ eval_CTSE <- function(inf_exp_tsr, true_exp_tsr, metrics = c("ExpSCorr", "CvSpe"
     results_list[["ExpSCorr_Summary"]] <- colMeans(sexp_matrix, na.rm = TRUE)
   }
   
-  # --- 2. CvSpe (RE-OPTIMIZED FOR STACK SAFETY) ---
+  # --- 2. CvSpe ---
   if ("CvSpe" %in% metrics){
     cvspe_matrix <- matrix(NA, nrow = G_dim, ncol = K_dim, dimnames = list(shared_genes, shared_cells))
     
@@ -168,7 +166,7 @@ eval_CTSE <- function(inf_exp_tsr, true_exp_tsr, metrics = c("ExpSCorr", "CvSpe"
     }
   }
   
-  # --- 3. ExpSpe (CCC) ---
+  # --- 3. ExpSpe ---
   if ("ExpSpe" %in% metrics){
     # Use colMeans to prevent large apply overhead
     Z_bar_inf  <- apply(E, c(2, 3), mean, na.rm = TRUE)
@@ -184,6 +182,7 @@ eval_CTSE <- function(inf_exp_tsr, true_exp_tsr, metrics = c("ExpSCorr", "CvSpe"
       mx <- mean(x, na.rm=T); my <- mean(y, na.rm=T)
       return((2 * rho * sqrt(s2x) * sqrt(s2y)) / (s2x + s2y + (mx - my)^2))
     })
+    names(results_list[["ExpSpe_Vector"]]) <- shared_genes
     results_list[["ExpSpe_Summary"]] <- mean(results_list[["ExpSpe_Vector"]], na.rm = TRUE)
   }
   
