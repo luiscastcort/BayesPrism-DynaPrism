@@ -18,8 +18,11 @@ library(NMF)
 library(Matrix)
 ```
 
+
 ```{r}
 #| label: libraries
+library(data.table)
+
 library(SingleCellExperiment)
 library(ggalign)
 library(ggplot2)
@@ -56,6 +59,11 @@ data_dir <- "../data/"
 dir.exists(data_dir)
 ```
 
+```{r}
+#| label: ntfy_setup
+library("httr")
+ntfy_topic <- "A01422880"
+```
 # 1. Loading Data
 ```{r}
 #| label: blk_load
@@ -75,11 +83,11 @@ Getting lists of cell types and cell states.
 #| label: cell_lists
 sce$cellType_hc <- droplevels(sce$cellType_hc)
 sce$cellType_broad_hc <- droplevels(sce$cellType_broad_hc)
-cell_types <- unique(as.vector(sce$cellType_broad_hc))
-cell_states <- unique(as.vector(sce$cellType_hc))
+all_types <- unique(as.vector(sce$cellType_broad_hc))
+all_states <- unique(as.vector(sce$cellType_hc))
 
-type_to_state <- lapply(cell_types,function(t)unique(as.vector(sce$cellType_hc[sce$cellType_broad_hc==t])))
-names(type_to_state) <- cell_types
+type_to_state <- lapply(all_types,function(t)unique(as.vector(sce$cellType_hc[sce$cellType_broad_hc==t])))
+names(type_to_state) <- all_types
 
 state_to_type <- stack(type_to_state)
 colnames(state_to_type) <- c("cell_state", "cell_type")
@@ -103,18 +111,20 @@ type_colors <- c(
 #type_colors <- setNames(brewer.pal(length(type_to_state), "Set3"), names(type_to_state))
 
 state_colors <- unlist(lapply(names(type_to_state), function(ct) {
-  states <- type_to_state[[ct]]
+  states <- sort(type_to_state[[ct]])
   n <- length(states)
   base <- type_colors[ct]
   
   if (n == 1) return(setNames(base, states))
   
   pal_func <- colorRampPalette(c(
-    lighten(base, 0.3), 
+    lighten(base, 0.4),
     base, 
-    darken(base, 0.3)
+    darken(base, 0.4)
   ))
   
+  # 3. Assign the gradient to the sorted names
+  # This ensures Excit_01 gets the lightest and Excit_15 gets the darkest
   return(setNames(pal_func(n), states))
 }))
 
@@ -126,13 +136,9 @@ state_colors <- unlist(lapply(names(type_to_state), function(ct) {
 # 2. Omega tensor
 
 ```{r}
-
-```
-
-
-```{r}
-load(paste0(data_dir, "NotebookRData/DynaPrism/", "Omega.rdata"))
-load(paste0(data_dir, "NotebookRData/DynaPrism/", "Weighted_Omega.rdata"))
+#load(paste0(data_dir, "NotebookRData/DynaPrism/", "Omega.rdata"))
+#load(paste0(data_dir, "NotebookRData/DynaPrism/", "Weighted_Omega.rdata"))
+#tOmega_s <- readRDS(paste0(data_dir, "NotebookRData/HuukiResiduals/", "Omega_s.rds"))
 gene_pressure <- apply(Omega, c(2,3), sum)
 ```
 
@@ -726,8 +732,8 @@ sample.Z.theta_n.Omega <- function(X_n,
 	  niche_pressure_vec <- as.numeric(theta_n.i %*% Omega_flat)
 	  niche_pressure_mat <- matrix(niche_pressure_vec, nrow = S_dim, ncol = length(G_shared_idx))
 	  
-	  sd_p <- sd(niche_pressure_mat)
-	  if(!is.na(sd_p) && sd_p > 0) niche_pressure_mat <- niche_pressure_mat / sd_p
+	  #sd_p <- sd(niche_pressure_mat)
+	  #if(!is.na(sd_p) && sd_p > 0) niche_pressure_mat <- niche_pressure_mat / sd_p
 	
 		#sample Z for patient n
 	  prob.mat <- (phi_mat * theta_n.i)
@@ -774,21 +780,7 @@ sample.Z.theta_n.Omega <- function(X_n,
 }
 ```
 
-## 3.5 Running DynaPrism
-
-```{r}
-#| label: running_dynaprism
-#| eval: false
-dp_res <- run.prism.Omega(prism = myPrism, Omega = Omega, n.cores=14)
-save(dp_res, file=paste0(data_dir, "NotebookRData/DynaPrism/", "dp_res.rdata"))
-```
-
-```{r}
-#| label: loading_dynaprism
-load(paste0(data_dir, "NotebookRData/DynaPrism/", "dp_res.rdata"))
-```
-
-# 4. Bulk Library Evaluations
+# 4. Evaluation Preparation
 
 ```{r}
 #| label: lib_definition
@@ -796,208 +788,42 @@ lib_prep <- "Bulk"
 lib_type <- "polyA"
 ```
 
-## 4.1 Fraction estimations
+## 4.1 Inputs
 
-### 4.1.1 Cell-State
+State data
 
-```{r}
-#| label: fracs
-blk_n_meta <- as.data.frame(colData(blk)[,c("SAMPLE_ID", "Sample", "library_prep", "library_type")])
-
-cells_per_state <- table(colData(sce)$Sample, colData(sce)$cellType_hc)
-true_s_frac <- as.table((cells_per_state/rowSums(cells_per_state))[,cell_states])
-bp_s_frac <- as.table(bp_res@posterior.initial.cellState@theta)[rownames(blk_n_meta),cell_states]
-dp_s_frac <- as.table(dp_res@posterior.initial.cellState@theta)[rownames(blk_n_meta),cell_states]
-```
-
-```{r}
-#| label: lib_s_frac
-dp_s_lib <- (dp_s_frac[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type,])
-rownames(dp_s_lib) <- blk_n_meta[rownames(blk_n_meta) %in% rownames(dp_s_lib),"Sample"]
-
-bp_s_lib <- (bp_s_frac[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type,])
-rownames(bp_s_lib) <- blk_n_meta[rownames(blk_n_meta) %in% rownames(bp_s_lib),"Sample"]
-
-lib_s_frac_dp <- eval_frac(dp_s_lib, true_s_frac)
-lib_s_frac_bp <- eval_frac(bp_s_lib, true_s_frac)
-```
-
-```{r}
-#| label: s_frac_plot
-true_s_frac_df <- as.data.frame(true_s_frac)
-colnames(true_s_frac_df) <- c("Sample", "cell_state", "Fraction")
-true_s_frac_df$SAMPLE_ID <- NA
-true_s_frac_df$library_prep <- "Nuc"
-true_s_frac_df$library_type <- "polyA"
-true_s_frac_df$cell_state <- trimws(as.character(true_s_frac_df$cell_state))
-true_s_frac_df$cell_state <- factor(true_s_frac_df$cell_state, 
-                                    levels = sort(unique(true_s_frac_df$cell_state)))
-
-bp_s_frac_df <- as.data.frame(bp_s_frac)
-colnames(bp_s_frac_df) <- c("SAMPLE_ID", "cell_state", "Fraction")
-bp_s_frac_df <- merge(bp_s_frac_df, 
-                    blk_n_meta[, c("SAMPLE_ID", "Sample", "library_prep", "library_type")], 
-                    by = "SAMPLE_ID", 
-                    all.x = TRUE)
-bp_s_frac_df$cell_state <- trimws(as.character(bp_s_frac_df$cell_state))
-bp_s_frac_df$cell_state <- factor(bp_s_frac_df$cell_state,
-                                  levels = sort(unique(bp_s_frac_df$cell_state)))
-
-dp_s_frac_df <- as.data.frame(dp_s_frac)
-colnames(dp_s_frac_df) <- c("SAMPLE_ID", "cell_state", "Fraction")
-dp_s_frac_df <- merge(dp_s_frac_df, 
-                    blk_n_meta[, c("SAMPLE_ID", "Sample", "library_prep", "library_type")], 
-                    by = "SAMPLE_ID", 
-                    all.x = TRUE)
-dp_s_frac_df$cell_state <- trimws(as.character(dp_s_frac_df$cell_state))
-dp_s_frac_df$cell_state <- factor(dp_s_frac_df$cell_state,
-                                  levels = sort(unique(dp_s_frac_df$cell_state)))
-
-true_s_frac_df$Source <- "snRNA-seq"
-bp_s_frac_df$Source <- "BayesPrism"
-dp_s_frac_df$Source <- paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ")")
-combined_s_df <- rbind(bp_s_frac_df, dp_s_frac_df, true_s_frac_df)
-
-samples <- sort(as.character(unique(combined_s_df$Sample)))[c(5:8)]
-combined_s_df <- combined_s_df[combined_s_df$Sample %in% samples, ]
-```
-
-```{r}
-ggplot(combined_s_df, mapping = aes(y = Fraction, x = library_prep, fill = cell_state)) +
-  geom_col() +
-  scale_fill_manual(values = state_colors) +
-  facet_grid(Sample ~ Source + library_type, scales = "free_x", space = "free_x") +
-  theme_minimal() + # Use a cleaner base theme
-  theme(
-    # Remove y-axis text and ticks
-    axis.text.y = element_blank(),
-    axis.ticks.y = element_blank(),
-    # Rotate the Sample labels (strips) on the right to be horizontal
-    strip.text.y = element_text(angle = 0),
-    # Rotate x-axis labels if they start to overlap
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    # Optional: adjust the spacing between facets
-    panel.spacing = unit(0.1, "lines")
-  )
-```
-
-### 4.1.2 Cell-Type
-
-```{r}
-cells_per_type <- table(colData(sce)$Sample, colData(sce)$cellType_broad_hc)
-true_t_frac <- as.table((cells_per_type/rowSums(cells_per_type))[, cell_types])
-#bp_t_frac <- as.table(bp_res@posterior.initial.cellType@theta)[rownames(blk_n_meta), cell_types]
-bp_t_frac <- as.table(bp_res@posterior.theta_f@theta)[rownames(blk_n_meta), cell_types]
-#dp_t_frac <- as.table(dp_res@posterior.initial.cellType@theta)[rownames(blk_n_meta), cell_types]
-dp_t_frac <- as.table(dp_res@posterior.theta_f@theta)[rownames(blk_n_meta), cell_types]
-
-dp_t_lib <- dp_t_frac[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type,]
-rownames(dp_t_lib) <- blk_n_meta[rownames(blk_n_meta) %in% rownames(dp_t_lib),"Sample"]
-bp_t_lib <- bp_t_frac[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type,]
-rownames(bp_t_lib) <- blk_n_meta[rownames(blk_n_meta) %in% rownames(bp_t_lib),"Sample"]
-
-lib_t_frac_dp <- eval_frac(dp_t_lib, true_t_frac)
-lib_t_frac_bp <- eval_frac(bp_t_lib, true_t_frac)
-```
-
-```{r}
-#| label: t_frac_plot
-true_t_frac_df <- as.data.frame(true_t_frac)
-colnames(true_t_frac_df) <- c("Sample", "cell_type", "Fraction")
-true_t_frac_df$SAMPLE_ID <- NA
-true_t_frac_df$library_prep <- "Nuc"
-true_t_frac_df$library_type <- "polyA"
-true_t_frac_df$cell_type <- trimws(as.character(true_t_frac_df$cell_type))
-true_t_frac_df$cell_type <- factor(true_t_frac_df$cell_type, 
-                                    levels = sort(unique(true_t_frac_df$cell_type)))
-
-bp_t_frac_df <- as.data.frame(bp_t_frac)
-colnames(bp_t_frac_df) <- c("SAMPLE_ID", "cell_type", "Fraction")
-bp_t_frac_df <- merge(bp_t_frac_df, 
-                    blk_n_meta[, c("SAMPLE_ID", "Sample", "library_prep", "library_type")], 
-                    by = "SAMPLE_ID", 
-                    all.x = TRUE)
-bp_t_frac_df$cell_type <- trimws(as.character(bp_t_frac_df$cell_type))
-bp_t_frac_df$cell_type <- factor(bp_t_frac_df$cell_type,
-                                  levels = sort(unique(bp_t_frac_df$cell_type)))
-
-dp_t_frac_df <- as.data.frame(dp_t_frac)
-colnames(dp_t_frac_df) <- c("SAMPLE_ID", "cell_type", "Fraction")
-dp_t_frac_df <- merge(dp_t_frac_df, 
-                    blk_n_meta[, c("SAMPLE_ID", "Sample", "library_prep", "library_type")], 
-                    by = "SAMPLE_ID", 
-                    all.x = TRUE)
-dp_t_frac_df$cell_type <- trimws(as.character(dp_t_frac_df$cell_type))
-dp_t_frac_df$cell_type <- factor(dp_t_frac_df$cell_type,
-                                  levels = sort(unique(dp_t_frac_df$cell_type)))
-
-true_t_frac_df$Source <- "snRNA-seq"
-bp_t_frac_df$Source <- "BayesPrism"
-dp_t_frac_df$Source <- paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ")")
-combined_t_df <- rbind(bp_t_frac_df, dp_t_frac_df, true_t_frac_df)
-
-samples <- sort(as.character(unique(combined_t_df$Sample)))[c(5:8)]
-combined_t_df <- combined_t_df[combined_t_df$Sample %in% samples, ]
-```
-
-```{r}
-ggplot(combined_t_df, mapping = aes(y = Fraction, x = library_prep, fill = cell_type)) +
-  geom_col() +
-  scale_fill_manual(values = type_colors) +
-  facet_grid(Sample ~ Source + library_type, scales = "free_x", space = "free_x") +
-  theme_minimal() + # Use a cleaner base theme
-  theme(
-    # Remove y-axis text and ticks
-    axis.text.y = element_blank(),
-    axis.ticks.y = element_blank(),
-    # Rotate the Sample labels (strips) on the right to be horizontal
-    strip.text.y = element_text(angle = 0),
-    # Rotate x-axis labels if they start to overlap
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    # Optional: adjust the spacing between facets
-    panel.spacing = unit(0.1, "lines")
-  )
-```
-
-## 4.2 CTSE estimations
-
-### 4.2.1 Cell-state
 ```{r}
 #| label: true_s_exp
-source("../R/eval_functions.R")
-true_s_exp <- sc_exp_tensor(assay(sce, "counts"), colData(sce)$Sample, colData(sce)$cellType_hc, fun = "sum")
-counts_per_state <- apply(true_s_exp, c(1,3), sum)
-true_s_frac <- as.table((counts_per_state/rowSums(counts_per_state))[, cell_states])
-```
 
+if (file.exists(paste0(data_dir, "NotebookRData/DynaPrism/", "lib_s_exp.rds"))){
+  lib_s_exp <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "lib_s_exp.rds"))
+} else {
+  lib_s_exp <- list()
+  lib_s_exp$`Ground Truth` <- sc_exp_tensor(assay(sce, "counts"), colData(sce)$Sample, colData(sce)$cellType_hc, fun = "sum")
+}
 
-```{r}
-#| label: inf_s_exp
-bp_s_exp <- bp_res@posterior.initial.cellState@Z
-dp_s_exp <- dp_res@posterior.initial.cellState@Z
+counts_per_state <- apply(lib_s_exp$`Ground Truth`, c(1,3), sum)
+#true_s_frac <- as.table((counts_per_state/rowSums(counts_per_state))[, all_states])
 ```
 
 ```{r}
 #| label: state_markers
-#| eval: false
 
-bp_param <- SnowParam(workers = 14, type = "SOCK")
-
-state_markers <- findMarkers(
+if (file.exists(paste0(data_dir, "NotebookRData/DynaPrism/", "state_markers.rds"))){
+  state_markers <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "state_markers.rds"))
+} else {
+  bp_param <- SnowParam(workers = 14, type = "SOCK")
+  state_markers <- findMarkers(
     sce, 
     groups = sce$cellType_hc, 
     block = sce$Sample,
     test.type = "t",
     direction = "up",
     BPPARAM = bp_param
-)
-
-save(state_markers, file=paste0(data_dir, "NotebookRData/DynaPrism/", "state_markers.rdata"))
-```
-
-```{r}
-#| label: load_state_markers
-load(paste0(data_dir, "NotebookRData/DynaPrism/", "state_markers.rdata"))
+    )
+  saveRDS(state_markers, file=paste0(data_dir, "NotebookRData/DynaPrism/", "state_markers.rds"))
+  rm(bp_param)
+}
 ```
 
 ```{r}
@@ -1018,116 +844,40 @@ state_marker_list <- lapply(state_markers, function(x) {
 })
 ```
 
-```{r}
-#| label: eval_CTSE_s
-
-lib_prep <- "Bulk"
-lib_type <- "polyA"
-bp_s_lib <- bp_s_exp[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type, , ]
-dimnames(bp_s_lib)[[1]] <- blk_n_meta[rownames(blk_n_meta) %in% dimnames(bp_s_lib)[[1]],"Sample"]
-
-dp_s_lib <- dp_s_exp[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type, , ]
-dimnames(dp_s_lib)[[1]] <- blk_n_meta[rownames(blk_n_meta) %in% dimnames(dp_s_lib)[[1]],"Sample"]
-
-source("../R/eval_functions.R")
-
-# Run the evaluation
-lib_s_CTSE_dp <- eval_CTSE(dp_s_lib, true_s_exp, markers_list = state_marker_list)
-lib_s_CTSE_bp <- eval_CTSE(bp_s_lib, true_s_exp, markers_list = state_marker_list)
-```
+Type data
 
 ```{r}
-plot_DeltaCTSE(lib_s_CTSE_dp, lib_s_CTSE_bp, 
-               title = paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ") Performance Gain over BayesPrism"),
-               subtitle = paste0(lib_prep, "-", lib_type, " RNA-seq library"),
-               group_colors = state_colors, 
-               mod_name = "DynaPrism", ori_name = "BayesPrism")
+#| label: lib_t_exp
 
-
-plot_ExpSpe(lib_s_CTSE_dp, lib_s_CTSE_bp, gene_pressure, 
-            title = "State-Level Expression Specificity",
-            subtitle = paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ") on ", lib_prep, "-", lib_type, " RNA-seq library"),
-            mod_name = "DynaPrism", ori_name = "BayesPrism")
-```
-
-#### 4.2.1.1 Plain Bulk
-
-```{r}
-#| label: blk_s_exp
-X <- as.matrix(myPrism@mixture)
-X_cpm <- sweep(X, 1, rowSums(X), "/") * 1e6
-
-G_names <- colnames(X)
-N_names <- rownames(X)
-K_names <- cell_states
-
-blk_s_exp <- array(NA, 
-                        dim = c(length(N_names), length(G_names), length(K_names)),
-                        dimnames = list(N_names, G_names, K_names))
-
-for(k in K_names) {
-  blk_s_exp[,,k] <- X
+if (file.exists(paste0(data_dir, "NotebookRData/DynaPrism/", "lib_t_exp.rds"))){
+  lib_t_exp <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "lib_t_exp.rds"))
+} else {
+  lib_t_exp <- list()
+  lib_t_exp$`Ground Truth` <- sc_exp_tensor(assay(sce, "counts"), colData(sce)$Sample, colData(sce)$cellType_hc, fun = "sum")
 }
 
-blk_s_lib <- blk_s_exp[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type, , ]
-dimnames(blk_s_lib)[[1]] <- blk_n_meta[rownames(blk_n_meta) %in% dimnames(blk_s_lib)[[1]],"Sample"]
-```
-
-```{r}
-lib_s_CTSE_blk <- eval_CTSE(blk_s_lib, true_s_exp, markers_list = state_marker_list)
-```
-
-```{r}
-plot_DeltaCTSE(lib_s_CTSE_dp, lib_s_CTSE_blk, 
-               title = paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ") Performance Gain over Plain Bulk"),
-               subtitle = paste0(lib_prep, "-", lib_type, " RNA-seq library"),
-               group_colors = state_colors, 
-               mod_name = "DynaPrism", ori_name = "Plain Bulk")
-
-plot_DeltaCTSE(lib_s_CTSE_bp, lib_s_CTSE_blk, 
-               #title = paste0("BayesPrism Performance Gain"),
-               subtitle = paste0(lib_prep, "-", lib_type, " RNA-seq library"),
-               group_colors = state_colors, 
-               mod_name = "BayesPrism", ori_name = "Plain Bulk")
-```
-
-### 4.2.2 Cell-type
-
-```{r}
-#| label: true_t_exp
-
-true_t_exp <- sc_exp_tensor(assay(sce, "counts"), colData(sce)$Sample, colData(sce)$cellType_broad_hc, fun = "sum")
-counts_per_type <- apply(true_t_exp, c(1,3), sum)
-true_t_frac <- as.matrix((counts_per_type/rowSums(counts_per_type))[,cell_types])
-```
-
-```{r}
-#| label: inf_t_exp
-bp_t_exp <- bp_res@posterior.initial.cellType@Z
-dp_t_exp <- dp_res@posterior.initial.cellType@Z
+counts_per_type <- apply(lib_t_exp$`Ground Truth`, c(1,3), sum)
+#true_t_frac <- as.matrix((counts_per_type/rowSums(counts_per_type))[,all_types])
 ```
 
 ```{r}
 #| label: type_markers
-#| eval: false
 
-bp_param <- SnowParam(workers = 14, type = "SOCK")
-
-type_markers <- findMarkers(
+if (file.exists(paste0(data_dir, "NotebookRData/DynaPrism/", "type_markers.rds"))){
+  type_markers <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "type_markers.rds"))
+} else {
+  bp_param <- SnowParam(workers = 14, type = "SOCK")
+  type_markers <- findMarkers(
     sce, 
     groups = sce$cellType_broad_hc, 
     block = sce$Sample,
     test.type = "t",
     direction = "up",
     BPPARAM = bp_param
-)
-
-save(type_markers, file=paste0(data_dir, "NotebookRData/DynaPrism/", "type_markers.rdata"))
-```
-
-```{r}
-#| label: load_type_markers
-load(paste0(data_dir, "NotebookRData/DynaPrism/", "type_markers.rdata"))
+    )
+  saveRDS(type_markers, file=paste0(data_dir, "NotebookRData/DynaPrism/", "type_markers.rds"))
+  rm(bp_param)
+}
 ```
 
 ```{r}
@@ -1148,137 +898,39 @@ type_marker_list <- lapply(type_markers, function(x) {
 })
 ```
 
+## 4.2 Running DynaPrism
+
+### 4.2.1 Matched Samples
+
 ```{r}
-#lib_prep <- "Nuc"
-#lib_type <- "RiboZeroGold"
+#| label: running_dynaprism
+beta <- 0.5
 
-bp_t_lib <- bp_t_exp[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type, , ]
-dimnames(bp_t_lib)[[1]] <- blk_n_meta[rownames(blk_n_meta) %in% dimnames(bp_t_lib)[[1]],"Sample"]
-
-dp_t_lib <- dp_t_exp[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type, , ]
-dimnames(dp_t_lib)[[1]] <- blk_n_meta[rownames(blk_n_meta) %in% dimnames(dp_t_lib)[[1]],"Sample"]
-
-# Run the evaluation
-source("../R/eval_functions.R")
-lib_t_CTSE_dp <- eval_CTSE(dp_t_lib, true_t_exp, markers_list = type_marker_list)
-lib_t_CTSE_bp <- eval_CTSE(bp_t_lib, true_t_exp, markers_list = type_marker_list)
+tryCatch({
+  dp_res <- run.prism.Omega(prism = myPrism, Omega = Omega, n.cores=14, gibbs.control = c(beta = beta))
+  saveRDS(dp_res, file=paste0(data_dir, "NotebookRData/DynaPrism/", "dp_res_cBeta050.rds"))
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = "Saved dp_res successfully ✅",
+       add_headers(Title = "R Process Success")
+       )
+}, error = function(e) {
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = paste0("Getting dp_res failed: ", e$message),
+       add_headers(Title = "R Process ERROR ❌", Priotity = "high")
+       )
+})
 ```
 
 ```{r}
-plot_DeltaCTSE(lib_t_CTSE_dp, lib_t_CTSE_bp, 
-               title = paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ") Performance Gain"),
-               subtitle = paste0(lib_prep, "-", lib_type, " RNA-seq library"),
-               group_colors = type_colors, 
-               mod_name = "DynaPrism", ori_name = "BayesPrism")
-
-
-plot_ExpSpe(lib_t_CTSE_dp, lib_t_CTSE_bp, gene_pressure, 
-            title = "Type-Level Expression Specificity",
-            subtitle = paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ") on ", lib_prep, "-", lib_type, " RNA-seq library"),
-            mod_name = "DynaPrism", ori_name = "BayesPrism")
+#| label: load_dp
+#| eval: false
+dp_res <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "dp_res_cBeta050.rds")) 
 ```
 
-#### 4.2.2.1 Plain Bulk
+### 4.2.2 Pseudobulk
 
 ```{r}
-#| label: blk_t_exp
-X <- as.matrix(myPrism@mixture)
-X_cpm <- sweep(X, 1, rowSums(X), "/") * 1e6
-
-G_names <- colnames(X)
-N_names <- rownames(X)
-K_names <- cell_types
-
-blk_t_exp <- array(NA, 
-                        dim = c(length(N_names), length(G_names), length(K_names)),
-                        dimnames = list(N_names, G_names, K_names))
-
-for(k in K_names) {
-  blk_t_exp[,,k] <- X
-}
-
-blk_t_lib <- blk_t_exp[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type, , ]
-dimnames(blk_t_lib)[[1]] <- blk_n_meta[rownames(blk_n_meta) %in% dimnames(blk_t_lib)[[1]],"Sample"]
-```
-
-```{r}
-lib_t_CTSE_blk <- eval_CTSE(blk_t_lib, true_t_exp, markers_list = state_marker_list)
-```
-
-```{r}
-plot_DeltaCTSE(lib_t_CTSE_dp, lib_t_CTSE_blk, 
-               title = paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ") Performance Gain over Plain Bulk"),
-               subtitle = paste0(lib_prep, "-", lib_type, " RNA-seq library"),
-               group_colors = type_colors, 
-               mod_name = "DynaPrism", ori_name = "Plain Bulk")
-
-plot_DeltaCTSE(lib_t_CTSE_bp, lib_t_CTSE_blk, 
-               #title = paste0("BayesPrism Performance Gain"),
-               subtitle = paste0(lib_prep, "-", lib_type, " RNA-seq library"),
-               group_colors = type_colors, 
-               mod_name = "BayesPrism", ori_name = "Plain Bulk")
-```
-
-#### 4.2.2.2 Fraction-Regressed Bulk
-
-```{r}
-X_lib <- X[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type, ]
-rownames(X_lib) <- blk_n_meta[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type, "Sample"]
-common_n <- intersect(rownames(X_lib), rownames(true_t_frac))
-
-X_lib <- X_lib[common_n, ]
-theta_t <- true_t_frac[common_n, ]
-
-beta_hat_t <- solve(t(theta_t) %*% theta_t) %*% t(theta_t) %*% X_lib
-X_hat_t <- theta_t %*% beta_hat_t
-
-mu_g <- colMeans(X_lib)
-
-# Calculate X_regress: X_observed - X_predicted + mu_g
-X_regress_t <- X_lib - X_hat_t
-X_regress_t <- sweep(X_regress_t, 2, mu_g, "+")
-X_regress_t[X_regress_t < 0] <- 0
-
-K_names <- colnames(theta_t)
-G_names <- colnames(X_lib)
-N_names <- rownames(X_lib)
-
-rgr_t_lib <- array(NA,
-                   dim = c(length(N_names), length(G_names), length(K_names)),
-                   dimnames = list(N_names, G_names, K_names))
-
-for(k in K_names) {
-  rgr_t_lib[,,k] <- X_regress_t
-}
-```
-
-```{r}
-lib_t_CTSE_rgr <- eval_CTSE(rgr_t_lib, true_t_exp, markers_list = state_marker_list)
-```
-
-```{r}
-plot_DeltaCTSE(lib_t_CTSE_rgr, lib_t_CTSE_blk, 
-               #title = paste0("BayesPrism Performance Gain"),
-               subtitle = paste0(lib_prep, "-", lib_type, " RNA-seq library"),
-               group_colors = type_colors, 
-               mod_name = "Fraction-Regressed Bulk", ori_name = "Plain Bulk")
-
-plot_DeltaCTSE(lib_t_CTSE_dp, lib_t_CTSE_rgr, 
-               title = paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ") Performance Gain over Fraction-Regressed Bulk"),
-               subtitle = paste0(lib_prep, "-", lib_type, " RNA-seq library"),
-               group_colors = type_colors, 
-               mod_name = "DynaPrism", ori_name = "Fraction-Regressed Bulk")
-
-plot_DeltaCTSE(lib_t_CTSE_bp, lib_t_CTSE_rgr, 
-               #title = paste0("BayesPrism Performance Gain"),
-               subtitle = paste0(lib_prep, "-", lib_type, " RNA-seq library"),
-               group_colors = type_colors, 
-               mod_name = "BayesPrism", ori_name = "Fraction-Regressed Bulk")
-```
-# 5. Pseudobulk
-
-```{r}
-pseudobulk <- apply(true_s_exp, c(1,2), sum)
+pseudobulk <- apply(lib_s_exp$`Ground Truth`, c(1,2), sum)
 ```
 
 ```{r}
@@ -1316,47 +968,553 @@ load(paste0(data_dir, "NotebookRData/DynaPrism/", "bp_pseudobulk.rdata"))
 
 ```{r}
 #| label: pseudobulk_dp
-#| eval: false
-dp_pseudobulk <- run.prism.Omega(prism = pseudobulk_Prism, Omega = Omega, n.cores=14)
-save(dp_pseudobulk, file=paste0(data_dir, "NotebookRData/DynaPrism/", "dp_pseudobulk.rdata"))
+
+tryCatch({
+  dp_pseudobulk <- run.prism.Omega(prism = pseudobulk_Prism, Omega = Omega, n.cores=14, gibbs.control = c(beta = beta))
+  saveRDS(dp_pseudobulk, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", "dp_pseudobulk_cBeta050.rds"))
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = "Saved dp_pseudobulk successfully ✅",
+       add_headers(Title = "R Process Success")
+       )
+}, error = function(e) {
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = paste0("Getting dp_pseudobulk failed: ", e$message),
+       add_headers(Title = "R Process ERROR ❌", Priotity = "high")
+       )
+})
 ```
 
 ```{r}
 #| label: load_pseudobulk_dp
-load(paste0(data_dir, "NotebookRData/DynaPrism/", "dp_pseudobulk.rdata"))
+#| eval: false
+dp_pseudobulk <- readRDS(paste0(data_dir, "NotebookRData/HuukiResiduals/", "dp_pseudobulk_cBeta050.rds")) 
 ```
 
-## 5.1 Fraction Estimates
+# 5. Matched Sample Evalluations
+
+## 5.1 Fraction estimations
 
 ```{r}
-bp_psb_s_frac <- as.table(bp_pseudobulk@posterior.initial.cellState@theta)
-dp_psb_s_frac <- as.table(dp_pseudobulk@posterior.initial.cellState@theta)
+dp_name <- paste0("cDynaPrism (β = ", dp_pseudobulk@control_param$gibbs.control$beta, ")")
+```
 
-psb_s_CTSE_bp <- eval_frac(bp_psb_s_frac, true_s_frac)
-psb_s_CTSE_bp <- eval_frac(dp_psb_s_frac, true_s_frac)
+### 5.1.1 Cell-State
+
+```{r}
+if (file.exists(paste0(data_dir, "NotebookRData/DynaPrism/", "full_s_frac.rds"))){
+  full_s_frac <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "full_s_frac.rds"))
+} else {
+  full_s_frac <- list()
+}
+
+lib_s_frac <- list()
+lib_s_eval <- list()
+```
+
+```{r}
+#| label: fracs
+blk_n_meta <- as.data.frame(colData(blk)[,c("SAMPLE_ID", "Sample", "library_prep", "library_type")])
+
+cells_per_state <- table(colData(sce)$Sample, colData(sce)$cellType_hc)
+
+lib_s_frac$`Ground Truth` <- as.table((cells_per_state/rowSums(cells_per_state))[,all_states])
+#lib_s_frac$`Ground Truth` <- as.table((counts_per_state/rowSums(counts_per_state))[, all_states])
+
+if (!"BayesPrism" %in% names(full_s_frac)){full_s_frac$BayesPrism <- as.table(bp_res@posterior.initial.cellState@theta)[rownames(blk_n_meta),all_states]}
+
+if (!dp_name %in% names(full_s_frac)){full_s_frac[[dp_name]] <- as.table(dp_res@posterior.initial.cellState@theta)[rownames(blk_n_meta),all_states]}
+
+saveRDS(full_s_frac, file = paste0(data_dir, "NotebookRData/DynaPrism/", "full_s_frac.rds"))
+
+lib_s_frac$BayesPrism <- (full_s_frac$BayesPrism[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type,])
+rownames(lib_s_frac$BayesPrism) <- blk_n_meta[rownames(blk_n_meta) %in% rownames(lib_s_frac$BayesPrism),"Sample"]
+
+lib_s_frac[[dp_name]] <- (full_s_frac[[dp_name]][blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type,])
+rownames(lib_s_frac[[dp_name]]) <- blk_n_meta[rownames(blk_n_meta) %in% rownames(lib_s_frac[[dp_name]]),"Sample"]
+```
+
+```{r}
+#| label: lib_s_eval
+
+lib_s_eval$BayesPrism <- eval_frac(lib_s_frac$BayesPrism, lib_s_frac$`Ground Truth`)
+lib_s_eval[[dp_name]] <- eval_frac(lib_s_frac[[dp_name]], lib_s_frac$`Ground Truth`)
+```
+
+```{r}
+#| label: s_frac_plot_data
+true_s_frac_df <- as.data.frame(lib_s_frac$`Ground Truth`)
+colnames(true_s_frac_df) <- c("Sample", "cell_state", "Fraction")
+true_s_frac_df$SAMPLE_ID <- NA
+true_s_frac_df$library_prep <- "Nuc"
+true_s_frac_df$library_type <- "polyA"
+true_s_frac_df$cell_state <- trimws(as.character(true_s_frac_df$cell_state))
+true_s_frac_df$cell_state <- factor(true_s_frac_df$cell_state, 
+                                    levels = sort(unique(true_s_frac_df$cell_state)))
+
+bp_s_frac_df <- as.data.frame(full_s_frac$BayesPrism)
+colnames(bp_s_frac_df) <- c("SAMPLE_ID", "cell_state", "Fraction")
+bp_s_frac_df <- merge(bp_s_frac_df, 
+                    blk_n_meta[, c("SAMPLE_ID", "Sample", "library_prep", "library_type")], 
+                    by = "SAMPLE_ID", 
+                    all.x = TRUE)
+bp_s_frac_df$cell_state <- trimws(as.character(bp_s_frac_df$cell_state))
+bp_s_frac_df$cell_state <- factor(bp_s_frac_df$cell_state,
+                                  levels = sort(unique(bp_s_frac_df$cell_state)))
+
+dp_s_frac_df <- as.data.frame(full_s_frac[[dp_name]])
+colnames(dp_s_frac_df) <- c("SAMPLE_ID", "cell_state", "Fraction")
+dp_s_frac_df <- merge(dp_s_frac_df, 
+                    blk_n_meta[, c("SAMPLE_ID", "Sample", "library_prep", "library_type")], 
+                    by = "SAMPLE_ID", 
+                    all.x = TRUE)
+dp_s_frac_df$cell_state <- trimws(as.character(dp_s_frac_df$cell_state))
+dp_s_frac_df$cell_state <- factor(dp_s_frac_df$cell_state,
+                                  levels = sort(unique(dp_s_frac_df$cell_state)))
+
+true_s_frac_df$Source <- "snRNA-seq"
+bp_s_frac_df$Source <- "BayesPrism"
+dp_s_frac_df$Source <- dp_name
+combined_s_df <- rbind(bp_s_frac_df, dp_s_frac_df, true_s_frac_df)
+
+samples <- sort(as.character(unique(combined_s_df$Sample)))#[c(5:8)]
+combined_s_df <- combined_s_df[combined_s_df$Sample %in% samples, ]
+
+counts_tab <- table(state_sample_counts$meta$Label)
+combined_s_df$n_samples <- as.numeric(counts_tab[match(combined_s_df$cell_state, names(counts_tab))])
+
+rm(true_s_frac_df, bp_s_frac_df, dp_s_frac_df)
+```
+
+```{r}
+#| label: s_frac_plot
+
+ggplot(combined_s_df, mapping = aes(y = Fraction, x = library_prep, fill = cell_state)) +
+  geom_col() +
+  #scale_fill_viridis_c(direction = 1, name = "sample per state") +
+  scale_fill_manual(values = state_colors) +
+  facet_grid(Sample ~ Source + library_type, scales = "free_x", space = "free_x") +
+  theme_minimal() + # Use a cleaner base theme
+  theme(
+    # Remove y-axis text and ticks
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    # Rotate the Sample labels (strips) on the right to be horizontal
+    strip.text.y = element_text(angle = 0),
+    # Rotate x-axis labels if they start to overlap
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    # Optional: adjust the spacing between facets
+    panel.spacing = unit(0.1, "lines")
+  )
+```
+
+### 5.1.2 Cell-Type
+
+```{r}
+
+if (file.exists(paste0(data_dir, "NotebookRData/DynaPrism/", "full_t_frac.rds"))){
+  full_t_frac <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "full_t_frac.rds"))
+} else {
+  full_t_frac <- list()
+}
+lib_t_frac <- list()
+lib_t_eval <- list()
+```
+
+```{r}
+cells_per_type <- table(colData(sce)$Sample, colData(sce)$cellType_broad_hc)
+lib_t_frac$`Ground Truth` <- as.table((cells_per_type/rowSums(cells_per_type))[, all_types])
+#lib_t_frac$`Ground Truth` <- as.table((counts_per_type/rowSums(counts_per_type))[,all_types])
+
+if (!"BayesPrism" %in% names(full_t_frac)){
+  full_t_frac$BayesPrism <- as.table(bp_res@posterior.theta_f@theta)[rownames(blk_n_meta),all_types]
+  #full_t_frac$BayesPrism <- as.table(bp_res@posterior.initial.cellType@theta)[rownames(blk_n_meta), all_types]
+}
+
+if (!dp_name %in% names(full_t_frac)){
+  full_t_frac[[dp_name]] <- as.table(dp_res@posterior.theta_f@theta)[rownames(blk_n_meta), all_types]
+  #full_t_frac[[dp_name]] <- as.table(dp_res@posterior.initial.cellType@theta)[rownames(blk_n_meta), all_types]
+}
+
+saveRDS(full_t_frac, file = paste0(data_dir, "NotebookRData/DynaPrism/", "full_t_frac.rds"))
+
+lib_t_frac[[dp_name]] <- full_t_frac[[dp_name]][blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type,]
+rownames(lib_t_frac[[dp_name]]) <- blk_n_meta[rownames(blk_n_meta) %in% rownames(lib_t_frac[[dp_name]]),"Sample"]
+lib_t_frac$BayesPrism <- full_t_frac$BayesPrism[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type,]
+rownames(lib_t_frac$BayesPrism) <- blk_n_meta[rownames(blk_n_meta) %in% rownames(lib_t_frac$BayesPrism),"Sample"]
+
+lib_t_eval$BayesPrism <- eval_frac(lib_t_frac$BayesPrism, lib_t_frac$`Ground Truth`)
+lib_t_eval[[dp_name]] <- eval_frac(lib_t_frac[[dp_name]], lib_t_frac$`Ground Truth`)
+```
+
+```{r}
+#| label: t_frac_plot
+true_t_frac_df <- as.data.frame(lib_t_frac$`Ground Truth`)
+colnames(true_t_frac_df) <- c("Sample", "cell_type", "Fraction")
+true_t_frac_df$SAMPLE_ID <- NA
+true_t_frac_df$library_prep <- "Nuc"
+true_t_frac_df$library_type <- "polyA"
+true_t_frac_df$cell_type <- trimws(as.character(true_t_frac_df$cell_type))
+true_t_frac_df$cell_type <- factor(true_t_frac_df$cell_type, 
+                                    levels = sort(unique(true_t_frac_df$cell_type)))
+
+bp_t_frac_df <- as.data.frame(full_t_frac$BayesPrism)
+colnames(bp_t_frac_df) <- c("SAMPLE_ID", "cell_type", "Fraction")
+bp_t_frac_df <- merge(bp_t_frac_df, 
+                    blk_n_meta[, c("SAMPLE_ID", "Sample", "library_prep", "library_type")], 
+                    by = "SAMPLE_ID", 
+                    all.x = TRUE)
+bp_t_frac_df$cell_type <- trimws(as.character(bp_t_frac_df$cell_type))
+bp_t_frac_df$cell_type <- factor(bp_t_frac_df$cell_type,
+                                  levels = sort(unique(bp_t_frac_df$cell_type)))
+
+dp_t_frac_df <- as.data.frame(full_t_frac[[dp_name]])
+colnames(dp_t_frac_df) <- c("SAMPLE_ID", "cell_type", "Fraction")
+dp_t_frac_df <- merge(dp_t_frac_df, 
+                    blk_n_meta[, c("SAMPLE_ID", "Sample", "library_prep", "library_type")], 
+                    by = "SAMPLE_ID", 
+                    all.x = TRUE)
+dp_t_frac_df$cell_type <- trimws(as.character(dp_t_frac_df$cell_type))
+dp_t_frac_df$cell_type <- factor(dp_t_frac_df$cell_type,
+                                  levels = sort(unique(dp_t_frac_df$cell_type)))
+
+true_t_frac_df$Source <- "snRNA-seq"
+bp_t_frac_df$Source <- "BayesPrism"
+dp_t_frac_df$Source <- dp_name
+combined_t_df <- rbind(bp_t_frac_df, dp_t_frac_df, true_t_frac_df)
+
+samples <- sort(as.character(unique(combined_t_df$Sample)))#[c(5:8)]
+combined_t_df <- combined_t_df[combined_t_df$Sample %in% samples, ]
+
+rm(true_t_frac_df, bp_t_frac_df, dp_t_frac_df)
+```
+
+```{r}
+ggplot(combined_t_df, mapping = aes(y = Fraction, x = library_prep, fill = cell_type)) +
+  geom_col() +
+  scale_fill_manual(values = type_colors) +
+  facet_grid(Sample ~ Source + library_type, scales = "free_x", space = "free_x") +
+  theme_minimal() + # Use a cleaner base theme
+  theme(
+    # Remove y-axis text and ticks
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    # Rotate the Sample labels (strips) on the right to be horizontal
+    strip.text.y = element_text(angle = 0),
+    # Rotate x-axis labels if they start to overlap
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    # Optional: adjust the spacing between facets
+    panel.spacing = unit(0.1, "lines")
+  )
+```
+
+## 5.2 CTSE estimations
+
+### 5.2.1 Cell-state
+
+```{r}
+#| label: lib_s_CTSE_initialization
+
+if (file.exists(paste0(data_dir, "NotebookRData/DynaPrism/", "full_s_exp.rds"))){
+  full_s_exp <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "full_s_exp.rds"))
+} else {
+  full_s_exp <- list()
+}
+
+if (file.exists(paste0(data_dir, "NotebookRData/DynaPrism/", "lib_s_CTSE.rds"))){
+  lib_s_CTSE <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "lib_s_CTSE.rds"))
+} else {
+  lib_s_CTSE <- list()
+}
+```
+
+```{r}
+#| label: full_s_exp
+
+X <- as.matrix(myPrism@mixture)
+X_cpm <- sweep(X, 1, rowSums(X), "/") * 1e6
+if (!"Plain Bulk" %in% names(full_s_exp)){
+  
+  G_names <- colnames(X)
+  N_names <- rownames(X)
+  K_names <- all_states
+  
+  full_s_exp$`Plain Bulk` <- array(NA, 
+                        dim = c(length(N_names), length(G_names), length(K_names)),
+                        dimnames = list(N_names, G_names, K_names))
+  
+  for(k in K_names) {
+    full_s_exp$`Plain Bulk`[,,k] <- X
+  }
+  
+  rm(G_names, N_names, K_names)
+}
+
+if (!"BayesPrism" %in% names(full_s_exp)){full_s_exp$BayesPrism <- bp_res@posterior.initial.cellState@Z}
+
+if (!dp_name %in% names(full_s_exp)){full_s_exp[[dp_name]] <- dp_res@posterior.initial.cellState@Z}
+
+saveRDS(full_s_exp, file = paste0(data_dir, "NotebookRData/DynaPrism/", "full_s_exp.rds"))
+```
+
+```{r}
+#| label: subset_lib_s_exp
+
+lib_s_exp$`Plain Bulk` <- full_s_exp$`Plain Bulk`[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type, , ]
+dimnames(lib_s_exp$`Plain Bulk`)[[1]] <- blk_n_meta[rownames(blk_n_meta) %in% dimnames(lib_s_exp$`Plain Bulk`)[[1]],"Sample"]
+
+lib_s_exp$BayesPrism <- full_s_exp$BayesPrism[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type, , ]
+dimnames(lib_s_exp$BayesPrism)[[1]] <- blk_n_meta[rownames(blk_n_meta) %in% dimnames(lib_s_exp$BayesPrism)[[1]],"Sample"]
+
+lib_s_exp[[dp_name]] <- full_s_exp[[dp_name]][blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type, , ]
+dimnames(lib_s_exp[[dp_name]])[[1]] <- blk_n_meta[rownames(blk_n_meta) %in% dimnames(lib_s_exp[[dp_name]])[[1]],"Sample"]
+```
+
+```{r}
+#| label: eval_lib_s_CTSE
+
+if ((!"Plain Bulk" %in% names(lib_s_CTSE)) & ("Plain Bulk" %in% names(lib_s_exp))){lib_s_CTSE$`Plain Bulk` <- eval_CTSE(lib_s_exp$`Plain Bulk`, lib_s_exp$`Ground Truth`, markers_list = state_marker_list)}
+
+if ((!dp_name %in% names(lib_s_CTSE)) & (dp_name %in% names(lib_s_exp))){lib_s_CTSE[[dp_name]] <- eval_CTSE(lib_s_exp[[dp_name]], lib_s_exp$`Ground Truth`, markers_list = state_marker_list)}
+
+
+if ((!"BayesPrism" %in% names(lib_s_CTSE)) & ("BayesPrism" %in% names(lib_s_exp))){lib_s_CTSE$`BayesPrism` <- eval_CTSE(lib_s_exp$BayesPrism, lib_s_exp$`Ground Truth`, markers_list = state_marker_list)}
+
+if ((!"Ground Truth" %in% names(lib_s_CTSE)) & ("Ground Truth" %in% names(lib_s_exp))){lib_s_CTSE$`Ground Truth` <- eval_CTSE(lib_s_exp$`Ground Truth`, lib_s_exp$`Ground Truth`, markers_list = state_marker_list)}
+
+saveRDS(lib_s_CTSE, file = paste0(data_dir, "NotebookRData/DynaPrism/", "lib_s_CTSE.rds"))
+```
+
+```{r}
+#| label: plot_CTSE_lib_s
+plot_dumbbellCTSE(lib_s_CTSE, modified = dp_name, original = "BayesPrism",
+                  subtitle = paste0(lib_prep, "-", lib_type, " RNA-seq library"),
+                  group_colors = state_colors)
+
+plot_ExpSpe(lib_s_CTSE[[dp_name]], lib_s_CTSE$`BayesPrism`, gene_pressure, 
+            title = "State-Level Expression Specificity",
+            subtitle = paste0(dp_name, " on ", lib_prep, "-", lib_type, " RNA-seq library"),
+            mod_name = dp_name, ori_name = "BayesPrism")
+
+plot_DeltaCTSE(lib_s_CTSE[[dp_name]], lib_s_CTSE$BayesPrism, 
+               subtitle = paste0(lib_prep, "-", lib_type, " RNA-seq library"),
+               group_colors = state_colors, 
+               mod_name = dp_name, ori_name = "BayesPrism")
+
+plot_DeltaCTSE(lib_s_CTSE[[dp_name]], lib_s_CTSE$`DynaPrism (β = 1)`, 
+               subtitle = paste0(lib_prep, "-", lib_type, " RNA-seq library"),
+               group_colors = state_colors, 
+               mod_name = dp_name, ori_name = "DynaPrism (β = 1)")
+
+plot_ExpSpe(lib_s_CTSE[[dp_name]], lib_s_CTSE$`DynaPrism (β = 1)`, gene_pressure, 
+            title = "State-Level Expression Specificity",
+            subtitle = paste0(dp_name, " on ", lib_prep, "-", lib_type, " RNA-seq library"),
+            mod_name = dp_name, ori_name = "DynaPrism (β = 1)")
+```
+
+### 5.2.2 Cell-type
+
+```{r}
+#| label: lib_t_CTSE_initialization
+
+if (file.exists(paste0(data_dir, "NotebookRData/DynaPrism/", "full_t_exp.rds"))){
+  full_t_exp <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "full_t_exp.rds"))
+} else {
+  full_t_exp <- list()
+}
+
+if (file.exists(paste0(data_dir, "NotebookRData/DynaPrism/", "lib_t_CTSE.rds"))){
+  lib_t_CTSE <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "lib_t_CTSE.rds"))
+} else {
+  lib_t_CTSE <- list()
+}
+```
+
+```{r}
+#| label: full_t_exp
+
+X <- as.matrix(myPrism@mixture)
+X_cpm <- sweep(X, 1, rowSums(X), "/") * 1e6
+if (!"Plain Bulk" %in% names(full_t_exp)){
+  
+  G_names <- colnames(X)
+  N_names <- rownames(X)
+  K_names <- all_types
+  full_t_exp$`Plain Bulk` <- array(NA, 
+                        dim = c(length(N_names), length(G_names), length(K_names)),
+                        dimnames = list(N_names, G_names, K_names))
+  
+  for(k in K_names) {
+    full_t_exp$`Plain Bulk`[,,k] <- X
+  }
+  rm(G_names, N_names, K_names)
+}
+
+if (!"BayesPrism" %in% names(full_t_exp)){full_t_exp$BayesPrism <- bp_res@posterior.initial.cellType@Z}
+
+if (!dp_name %in% names(full_t_exp)){full_t_exp[[dp_name]] <- dp_res@posterior.initial.cellType@Z}
+
+saveRDS(full_t_exp, file = paste0(data_dir, "NotebookRData/DynaPrism/", "full_t_exp.rds"))
+```
+
+```{r}
+#| label: regressed_bulk_lib_t
+
+X_lib <- X[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type, ]
+rownames(X_lib) <- blk_n_meta[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type, "Sample"]
+common_n <- intersect(rownames(X_lib), rownames(lib_t_frac$`Ground Truth`))
+
+X_lib <- X_lib[common_n, ]
+theta_t <- lib_t_frac$`Ground Truth`[common_n, ]
+
+beta_hat_t <- solve(t(theta_t) %*% theta_t) %*% t(theta_t) %*% X_lib
+X_hat_t <- theta_t %*% beta_hat_t
+
+mu_g <- colMeans(X_lib)
+
+# Calculate X_regress: X_observed - X_predicted + mu_g
+X_regress_t <- X_lib - X_hat_t
+X_regress_t <- sweep(X_regress_t, 2, mu_g, "+")
+X_regress_t[X_regress_t < 0] <- 0
+
+K_names <- colnames(theta_t)
+G_names <- colnames(X_lib)
+N_names <- rownames(X_lib)
+
+lib_t_exp$`Fraction-Regressed Bulk` <- array(NA,
+                   dim = c(length(N_names), length(G_names), length(K_names)),
+                   dimnames = list(N_names, G_names, K_names))
+
+for(k in K_names) {
+  lib_t_exp$`Fraction-Regressed Bulk`[,,k] <- X_regress_t
+}
+
+rm(X_lib, theta_t, beta_hat_t, X_hat_t, mu_g, X_regress_t ,G_names, N_names, K_names)
+```
+
+```{r}
+#| label: lib_t_subsetting
+
+lib_t_exp$`Plain Bulk` <- full_t_exp$`Plain Bulk`[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type, , ]
+dimnames(lib_t_exp$`Plain Bulk`)[[1]] <- blk_n_meta[rownames(blk_n_meta) %in% dimnames(lib_t_exp$`Plain Bulk`)[[1]],"Sample"]
+
+lib_t_exp$BayesPrism <- full_t_exp$BayesPrism[blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type, , ]
+dimnames(lib_t_exp$BayesPrism)[[1]] <- blk_n_meta[rownames(blk_n_meta) %in% dimnames(lib_t_exp$BayesPrism)[[1]],"Sample"]
+
+lib_t_exp[[dp_name]] <- full_t_exp[[dp_name]][blk_n_meta$library_prep == lib_prep & blk_n_meta$library_type == lib_type, , ]
+dimnames(lib_t_exp[[dp_name]])[[1]] <- blk_n_meta[rownames(blk_n_meta) %in% dimnames(lib_t_exp[[dp_name]])[[1]],"Sample"]
+
+```
+
+```{r}
+#| label: eval_CTSE_lib_t
+if ((!"Plain Bulk" %in% names(lib_t_CTSE)) & ("Plain Bulk" %in% names(lib_t_exp))){lib_t_CTSE$`Plain Bulk` <- eval_CTSE(lib_t_exp$`Plain Bulk`, lib_t_exp$`Ground Truth`, markers_list = state_marker_list)}
+
+if ((!"Fraction-Regressed Bulk" %in% names(lib_t_CTSE)) & ("Fraction-Regressed Bulk" %in% names(lib_t_exp))){lib_t_CTSE$`Fraction-Regressed Bulk` <- eval_CTSE(lib_t_exp$`Fraction-Regressed Bulk`, lib_t_exp$`Ground Truth`, markers_list = state_marker_list)}
+
+if ((!dp_name %in% names(lib_t_CTSE)) & (dp_name %in% names(lib_t_exp))){lib_t_CTSE[[dp_name]] <- eval_CTSE(lib_t_exp[[dp_name]], lib_t_exp$`Ground Truth`, markers_list = type_marker_list)}
+
+if ((!"BayesPrism" %in% names(lib_t_CTSE)) & ("BayesPrism" %in% names(lib_t_exp))){lib_t_CTSE$BayesPrism <- eval_CTSE(lib_t_exp$BayesPrism, lib_t_exp$`Ground Truth`, markers_list = type_marker_list)}
+
+if ((!"Ground Truth" %in% names(lib_t_CTSE)) & ("Ground Truth" %in% names(lib_t_exp))){lib_t_CTSE$`Ground Truth` <- eval_CTSE(lib_t_exp$`Ground Truth`, lib_t_exp$`Ground Truth`, markers_list = type_marker_list)}
+
+saveRDS(lib_t_CTSE, file = paste0(data_dir, "NotebookRData/DynaPrism/", "lib_t_CTSE.rds"))
+```
+
+```{r}
+#| label: plot_CTSE_lib_t
+plot_dumbbellCTSE(lib_t_CTSE, modified = dp_name, original = "BayesPrism",
+                  subtitle = paste0(lib_prep, "-", lib_type, " RNA-seq library"),
+                  group_colors = type_colors)
+
+plot_ExpSpe(lib_t_CTSE[[dp_name]], lib_t_CTSE$BayesPrism, gene_pressure, 
+            title = "Type-Level Expression Specificity",
+            subtitle = paste0(dp_name, " on ", lib_prep, "-", lib_type, " RNA-seq library"),
+            mod_name = dp_name, ori_name = "BayesPrism")
+
+plot_DeltaCTSE(lib_t_CTSE[[dp_name]], lib_t_CTSE$BayesPrism, 
+               subtitle = paste0(lib_prep, "-", lib_type, " RNA-seq library"),
+               group_colors = type_colors, 
+               mod_name = dp_name, ori_name = "BayesPrism")
+
+plot_DeltaCTSE(lib_t_CTSE[[dp_name]], lib_t_CTSE$`DynaPrism (β = 1)`, 
+               subtitle = paste0(lib_prep, "-", lib_type, " RNA-seq library"),
+               group_colors = state_colors, 
+               mod_name = dp_name, ori_name = "DynaPrism (β = 1)")
+
+plot_ExpSpe(lib_t_CTSE[[dp_name]], lib_t_CTSE$`DynaPrism (β = 1)`, gene_pressure, 
+            title = "Type-Level Expression Specificity",
+            subtitle = paste0(dp_name, " on ", lib_prep, "-", lib_type, " RNA-seq library"),
+            mod_name = dp_name, ori_name = "DynaPrism (β = 1)")
+```
+
+# 6. Pseudobulk
+
+## 6.1 Fraction Estimates
+
+```{r}
+if (file.exists(paste0(data_dir, "NotebookRData/DynaPrism/", "psb_s_frac.rds"))){
+  psb_s_frac <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "psb_s_frac.rds"))
+} else {
+  psb_s_frac <- list()
+}
+
+if (file.exists(paste0(data_dir, "NotebookRData/DynaPrism/", "psb_t_frac.rds"))){
+  psb_t_frac <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "psb_t_frac.rds"))
+} else {
+  psb_t_frac <- list()
+}
+
+if (file.exists(paste0(data_dir, "NotebookRData/DynaPrism/", "psb_s_eval.rds"))){
+  psb_s_eval <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "psb_s_eval.rds"))
+} else {
+  psb_s_eval <- list()
+}
+
+if (file.exists(paste0(data_dir, "NotebookRData/DynaPrism/", "psb_t_eval.rds"))){
+  psb_t_eval <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "psb_t_eval.rds"))
+} else {
+  psb_t_eval <- list()
+}
+```
+
+```{r}
+if (!"BayesPrism" %in% names(psb_s_frac)){psb_s_frac$BayesPrism <- as.table(bp_pseudobulk@posterior.initial.cellState@theta)}
+if (!dp_name %in% names(psb_s_frac)){psb_s_frac[[dp_name]] <- as.table(dp_pseudobulk@posterior.initial.cellState@theta)}
+saveRDS(psb_s_frac, file = paste0(data_dir, "NotebookRData/DynaPrism/", "psb_s_frac.rds"))
+
+if (!"BayesPrism" %in% names(psb_s_eval)){psb_s_eval$BayesPrism <- eval_frac(psb_s_frac$BayesPrism, lib_t_frac$`Ground Truth`)}
+if (!dp_name %in% names(psb_s_eval)){psb_s_eval[[dp_name]] <- eval_frac(psb_s_frac[[dp_name]], lib_t_frac$`Ground Truth`)}
+saveRDS(psb_s_eval, file = paste0(data_dir, "NotebookRData/DynaPrism/", "psb_s_eval.rds"))
 ```
 
 ```{r}
 #| label: psb_s_frac_plot
+true_s_frac_df <- as.data.frame(lib_s_frac$`Ground Truth`)
+colnames(true_s_frac_df) <- c("Sample", "cell_state", "Fraction")
+true_s_frac_df$cell_state <- trimws(as.character(true_s_frac_df$cell_state))
+true_s_frac_df$cell_state <- factor(true_s_frac_df$cell_state, 
+                                    levels = sort(unique(true_s_frac_df$cell_state)))
 
-bp_psb_s_frac_df <- as.data.frame(bp_psb_s_frac)
+bp_psb_s_frac_df <- as.data.frame(psb_s_frac$BayesPrism)
 colnames(bp_psb_s_frac_df) <- c("Sample", "cell_state", "Fraction")
 bp_psb_s_frac_df$cell_state <- trimws(as.character(bp_psb_s_frac_df$cell_state))
 bp_psb_s_frac_df$cell_state <- factor(bp_psb_s_frac_df$cell_state,
                                   levels = sort(unique(bp_psb_s_frac_df$cell_state)))
 
-dp_psb_s_frac_df <- as.data.frame(dp_psb_s_frac)
+dp_psb_s_frac_df <- as.data.frame(psb_s_frac[[dp_name]])
 colnames(dp_psb_s_frac_df) <- c("Sample", "cell_state", "Fraction")
 dp_psb_s_frac_df$cell_state <- trimws(as.character(dp_psb_s_frac_df$cell_state))
 dp_psb_s_frac_df$cell_state <- factor(dp_psb_s_frac_df$cell_state,
                                   levels = sort(unique(dp_psb_s_frac_df$cell_state)))
-
+true_s_frac_df$Source <- "snRNA-seq"
 bp_psb_s_frac_df$Source <- "BayesPrism"
-dp_psb_s_frac_df$Source <- paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ")")
+dp_psb_s_frac_df$Source <- dp_name
 combined_psb_s_df <- rbind(bp_psb_s_frac_df, dp_psb_s_frac_df, true_s_frac_df[,c("Sample", "cell_state", "Fraction", "Source")])
 
-samples <- sort(as.character(unique(combined_psb_s_df$Sample)))[c(5:8)]
+samples <- sort(as.character(unique(combined_psb_s_df$Sample)))#[c(5:8)]
 combined_psb_s_df <- combined_psb_s_df[combined_psb_s_df$Sample %in% samples, ]
+
+rm(dp_psb_s_frac_df, bp_psb_s_frac_df, true_s_frac_df)
 ```
 
 ```{r}
@@ -1379,36 +1537,55 @@ ggplot(combined_psb_s_df, mapping = aes(y = Fraction, x = Source, fill = cell_st
 ```
 
 ```{r}
-#bp_t_frac <- as.table(bp_pseudobulk@posterior.initial.cellType@theta)
-bp_psb_t_frac <- as.table(bp_pseudobulk@posterior.theta_f@theta)
-#dp_t_frac <- as.table(dp_pseudobulk@posterior.initial.cellType@theta)
-dp_psb_t_frac <- as.table(dp_pseudobulk@posterior.theta_f@theta)
 
-psb_t_CTSE_bp <- eval_frac(bp_psb_t_frac, true_t_frac)
-psb_t_CTSE_dp <- eval_frac(dp_psb_t_frac, true_t_frac)
+if (!"BayesPrism" %in% names(psb_t_frac)){
+  #psb_t_frac$BayesPrism <- as.table(bp_pseudobulk@posterior.initial.cellType@theta)
+  psb_t_frac$BayesPrism <- as.table(bp_pseudobulk@posterior.theta_f@theta)
+}
+
+if (!dp_name %in% names(psb_t_frac)){
+  #psb_t_frac[[dp_name]] <- as.table(dp_pseudobulk@posterior.initial.cellType@theta)
+  psb_t_frac[[dp_name]] <- as.table(dp_pseudobulk@posterior.theta_f@theta)
+  }
+saveRDS(psb_t_frac, file = paste0(data_dir, "NotebookRData/DynaPrism/", "psb_t_frac.rds"))
+
+
+if (!"BayesPrism" %in% names(psb_t_eval)){psb_t_eval$BayesPrism <- eval_frac(psb_t_frac$BayesPrism, lib_t_frac$`Ground Truth`)}
+
+if (!dp_name %in% names(psb_t_eval)){psb_t_eval[[dp_name]] <- eval_frac(psb_t_frac[[dp_name]], lib_t_frac$`Ground Truth`)}
+
+saveRDS(psb_s_eval, file = paste0(data_dir, "NotebookRData/DynaPrism/", "psb_t_eval.rds"))
 ```
 
 ```{r}
 #| label: psb_t_frac_plot
+true_t_frac_df <- as.data.frame(lib_t_frac$`Ground Truth`)
+colnames(true_t_frac_df) <- c("Sample", "cell_type", "Fraction")
+true_t_frac_df$cell_type <- trimws(as.character(true_t_frac_df$cell_type))
+true_t_frac_df$cell_type <- factor(true_t_frac_df$cell_type, 
+                                    levels = sort(unique(true_t_frac_df$cell_type)))
 
-bp_psb_t_frac_df <- as.data.frame(bp_psb_t_frac)
+bp_psb_t_frac_df <- as.data.frame(psb_t_frac$BayesPrism)
 colnames(bp_psb_t_frac_df) <- c("Sample", "cell_type", "Fraction")
 bp_psb_t_frac_df$cell_type <- trimws(as.character(bp_psb_t_frac_df$cell_type))
 bp_psb_t_frac_df$cell_type <- factor(bp_psb_t_frac_df$cell_type,
                                   levels = sort(unique(bp_psb_t_frac_df$cell_type)))
 
-dp_psb_t_frac_df <- as.data.frame(dp_psb_t_frac)
+dp_psb_t_frac_df <- as.data.frame(psb_t_frac[[dp_name]])
 colnames(dp_psb_t_frac_df) <- c("Sample", "cell_type", "Fraction")
 dp_psb_t_frac_df$cell_type <- trimws(as.character(dp_psb_t_frac_df$cell_type))
 dp_psb_t_frac_df$cell_type <- factor(dp_psb_t_frac_df$cell_type,
                                   levels = sort(unique(dp_psb_t_frac_df$cell_type)))
 
+true_t_frac_df$Source <- "snRNA-seq"
 bp_psb_t_frac_df$Source <- "BayesPrism"
-dp_psb_t_frac_df$Source <- paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ")")
+dp_psb_t_frac_df$Source <- dp_name
 combined_psb_t_df <- rbind(bp_psb_t_frac_df, dp_psb_t_frac_df, true_t_frac_df[,c("Sample", "cell_type", "Fraction", "Source")])
 
-samples <- sort(as.character(unique(combined_psb_t_df$Sample)))[c(5:8)]
+samples <- sort(as.character(unique(combined_psb_t_df$Sample)))#[c(5:8)]
 combined_psb_t_df <- combined_psb_t_df[combined_psb_t_df$Sample %in% samples, ]
+
+rm(dp_psb_t_frac_df, bp_psb_t_frac_df, true_t_frac_df)
 ```
 
 ```{r}
@@ -1430,201 +1607,191 @@ ggplot(combined_psb_t_df, mapping = aes(y = Fraction, x = Source, fill = cell_ty
   )
 ```
 
-## 5.2 CTSE Estimates
-
-### 5.2.1 Cell-State
+## 6.2 CTSE Estimates
 
 ```{r}
-bp_s_exp <- bp_pseudobulk@posterior.initial.cellState@Z
-dp_s_exp <- dp_pseudobulk@posterior.initial.cellState@Z
+#| label: psb_s_CTSE_initialization
 
-psb_s_CTSE_bp <- eval_CTSE(bp_s_exp, true_s_exp, markers_list = state_marker_list)
-psb_s_CTSE_dp <- eval_CTSE(dp_s_exp, true_s_exp, markers_list = state_marker_list)
+if (file.exists(paste0(data_dir, "NotebookRData/DynaPrism/", "psb_s_exp.rds"))){
+  psb_s_exp <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "psb_s_exp.rds"))
+} else {
+  psb_s_exp <- list()
+}
+
+if (file.exists(paste0(data_dir, "NotebookRData/DynaPrism/", "psb_t_exp.rds"))){
+  psb_t_exp <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "psb_t_exp.rds"))
+} else {
+  psb_t_exp <- list()
+}
+
+
+if (file.exists(paste0(data_dir, "NotebookRData/DynaPrism/", "psb_s_CTSE.rds"))){
+  psb_s_CTSE <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "psb_s_CTSE.rds"))
+} else {
+  psb_s_CTSE <- list()
+}
+
+if (file.exists(paste0(data_dir, "NotebookRData/DynaPrism/", "psb_t_CTSE.rds"))){
+  psb_t_CTSE <- readRDS(paste0(data_dir, "NotebookRData/DynaPrism/", "psb_t_CTSE.rds"))
+} else {
+  psb_t_CTSE <- list()
+}
 ```
 
-```{r}
-plot_DeltaCTSE(psb_s_CTSE_dp, psb_s_CTSE_bp, 
-               title = paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ") Performance Gain over BayesPrism"),
-               subtitle = "Pseudobulk",
-               group_colors = state_colors, 
-               mod_name = "DynaPrism", ori_name = "BayesPrism")
-```
-
-```{r}
-plot_ExpSpe(psb_s_CTSE_dp, psb_s_CTSE_bp, gene_pressure, 
-            title = "State-Level Expression Specificity",
-            subtitle = paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ") on Pseudobulk"),
-            mod_name = "DynaPrism", ori_name = "BayesPrism")
-```
-
-#### 5.2.1.1 Plain Bulk
+### 6.2.1 Cell-State
 
 ```{r}
 #| label: psb_s_exp
+
 psb_X <- as.matrix(pseudobulk_Prism@mixture)
 psb_X_cpm <- sweep(X, 1, rowSums(X), "/") * 1e6
-
-G_names <- colnames(psb_X)
-N_names <- rownames(psb_X)
-K_names <- cell_states
-
-psb_s_exp <- array(NA, 
+if (!"Plain Bulk" %in% names(psb_s_exp)){
+  G_names <- colnames(psb_X)
+  N_names <- rownames(psb_X)
+  K_names <- all_states
+  psb_s_exp$`Plain Bulk` <- array(NA, 
                    dim = c(length(N_names), length(G_names), length(K_names)),
                    dimnames = list(N_names, G_names, K_names))
+  for(k in K_names) {
+    psb_s_exp$`Plain Bulk`[,,k] <- psb_X
+    }
+  rm(psb_X_cpm, G_names, N_names, K_names)
+} 
 
-for(k in K_names) {
-  psb_s_exp[,,k] <- psb_X
-}
+if (!"BayesPrism" %in% names(psb_s_exp)){psb_s_exp$BayesPrism <- bp_pseudobulk@posterior.initial.cellState@Z}
+
+if (!dp_name %in% names(psb_s_exp)){psb_s_exp[[dp_name]] <- dp_pseudobulk@posterior.initial.cellState@Z}
+
+saveRDS(psb_s_exp, file = paste0(data_dir, "NotebookRData/DynaPrism/", "psb_s_exp.rds"))
 ```
 
 ```{r}
-psb_s_CTSE_blk <- eval_CTSE(psb_s_exp, true_s_exp, markers_list = state_marker_list)
+#| label: eval_CTSE_psb_s
+if ((!"Plain Bulk" %in% names(psb_s_CTSE)) & ("Plain Bulk" %in% names(psb_s_exp))){psb_s_CTSE$`Plain Bulk` <- eval_CTSE(psb_s_exp$`Plain Bulk`, lib_s_exp$`Ground Truth`, markers_list = state_marker_list)}
+
+if ((!"BayesPrism" %in% names(psb_s_CTSE)) & ("BayesPrism" %in% names(psb_s_exp))){psb_s_CTSE$BayesPrism <- eval_CTSE(psb_s_exp$BayesPrism, lib_s_exp$`Ground Truth`, markers_list = state_marker_list)}
+
+if ((!dp_name %in% names(psb_s_CTSE)) & (dp_name %in% names(psb_s_exp))){psb_s_CTSE[[dp_name]] <- eval_CTSE(psb_s_exp[[dp_name]], lib_s_exp$`Ground Truth`, markers_list = state_marker_list)}
+
+if ((!"Ground Truth" %in% names(psb_s_CTSE)) & ("Ground Truth" %in% names(lib_s_exp))){psb_s_CTSE$`Ground Truth` <- eval_CTSE(lib_s_exp$`Ground Truth`, lib_s_exp$`Ground Truth`, markers_list = state_marker_list)}
+
+saveRDS(psb_s_CTSE, file = paste0(data_dir, "NotebookRData/DynaPrism/", "psb_s_CTSE.rds"))
 ```
 
 ```{r}
-plot_DeltaCTSE(psb_s_CTSE_dp, psb_s_CTSE_blk, 
-               title = paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ") Performance Gain over Plain Bulk"),
-               subtitle =  paste0("Pseudobulk"),
-               group_colors = state_colors, 
-               mod_name = "DynaPrism", ori_name = "Plain Bulk")
+#| label: plot_CTSE_psb_s
+plot_dumbbellCTSE(psb_s_CTSE, modified = dp_name, original = "BayesPrism",
+                  subtitle = "Pseudobulk",
+                  group_colors = state_colors)
 
-plot_DeltaCTSE(psb_s_CTSE_bp, psb_s_CTSE_blk, 
-               #title = paste0("BayesPrism Performance Gain"),
-               subtitle = paste0("Pseudobulk"),
-               group_colors = state_colors, 
-               mod_name = "BayesPrism", ori_name = "Plain Bulk")
-```
+plot_ExpSpe(psb_s_CTSE[[dp_name]], psb_s_CTSE$`BayesPrism`, gene_pressure, 
+            title = "State-Level Expression Specificity",
+            subtitle = "Pseudobulk",
+            mod_name = dp_name, ori_name = "BayesPrism")
 
-### 5.2.2 Cell-Type
-
-```{r}
-bp_t_exp <- bp_pseudobulk@posterior.initial.cellType@Z
-dp_t_exp <- dp_pseudobulk@posterior.initial.cellType@Z
-
-psb_t_CTSE_bp <- eval_CTSE(bp_t_exp, true_t_exp, markers_list = type_marker_list)
-psb_t_CTSE_dp <- eval_CTSE(dp_t_exp, true_t_exp, markers_list = type_marker_list)
-```
-
-```{r}
-psb_t_CTSE_bp$ExpSCorr_Summary
-psb_t_CTSE_dp$ExpSCorr_Summary
-
-psb_t_CTSE_bp$CvSpe_Summary
-psb_t_CTSE_dp$CvSpe_Summary
-
-psb_t_CTSE_bp$ExpSpe_Summary
-psb_t_CTSE_dp$ExpSpe_Summary
-
-psb_t_CTSE_bp$ExpMAE_Summary
-psb_t_CTSE_dp$ExpMAE_Summary
-
-psb_t_CTSE_bp$ExpRMSE_Summary
-psb_t_CTSE_dp$ExpRMSE_Summary
-```
-
-```{r}
-plot_DeltaCTSE(psb_t_CTSE_dp, psb_t_CTSE_bp, 
-               title = paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ") Performance Gain over BayesPrism"),
+plot_DeltaCTSE(psb_s_CTSE[[dp_name]], psb_s_CTSE$BayesPrism,
                subtitle = "Pseudobulk",
-               group_colors = type_colors, 
-               mod_name = "DynaPrism", ori_name = "BayesPrism")
+               group_colors = state_colors, 
+               mod_name = dp_name, ori_name = "Bayes Prism")
+
+plot_DeltaCTSE(psb_s_CTSE[[dp_name]], psb_s_CTSE$`DynaPrism (β = 1)`,
+               subtitle = "Pseudobulk",
+               group_colors = state_colors, 
+               mod_name = dp_name, ori_name = "DynaPrism (β = 1)")
 ```
 
-```{r}
-plot_ExpSpe(psb_t_CTSE_dp, psb_t_CTSE_bp, gene_pressure, 
-            title = "Type-Level Expression Specificity",
-            subtitle = paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ") on Pseudobulk"),
-            mod_name = "DynaPrism", ori_name = "BayesPrism")
-```
-#### 5.2.2.1 Plain Bulk
+### 6.2.2 Cell-Type
 
 ```{r}
 #| label: psb_t_exp
+
 psb_X <- as.matrix(pseudobulk_Prism@mixture)
 psb_X_cpm <- sweep(X, 1, rowSums(X), "/") * 1e6
-
-G_names <- colnames(psb_X)
-N_names <- rownames(psb_X)
-K_names <- cell_types
-
-psb_t_exp <- array(NA, 
+if (!"Plain Bulk" %in% names(psb_t_exp)){
+  G_names <- colnames(psb_X)
+  N_names <- rownames(psb_X)
+  K_names <- all_types
+  
+  psb_t_exp$`Plain Bulk` <- array(NA, 
                    dim = c(length(N_names), length(G_names), length(K_names)),
                    dimnames = list(N_names, G_names, K_names))
-
-for(k in K_names) {
-  psb_t_exp[,,k] <- psb_X
+  for(k in K_names) {
+    psb_t_exp$`Plain Bulk`[,,k] <- psb_X
+    }
+  rm(psb_X_cpm, G_names, N_names, K_names)
 }
-```
 
-```{r}
-psb_t_CTSE_blk <- eval_CTSE(psb_t_exp, true_t_exp, markers_list = state_marker_list)
-```
-
-```{r}
-plot_DeltaCTSE(psb_t_CTSE_dp, psb_t_CTSE_blk, 
-               title = paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ") Performance Gain over Plain Bulk"),
-               subtitle =  paste0("Pseudobulk"),
-               group_colors = type_colors, 
-               mod_name = "DynaPrism", ori_name = "Plain Bulk")
-
-plot_DeltaCTSE(psb_t_CTSE_bp, psb_t_CTSE_blk, 
-               #title = paste0("BayesPrism Performance Gain"),
-               subtitle = paste0("Pseudobulk"),
-               group_colors = type_colors, 
-               mod_name = "BayesPrism", ori_name = "Plain Bulk")
-```
-
-#### 5.2.2.2 Fraction-Regressed Bulk
-
-```{r}
-common_n <- intersect(rownames(psb_X), rownames(true_t_frac))
-
-psb_X <- psb_X[common_n, ]
-theta_t <- true_t_frac[common_n, ]
-
-psb_beta_hat_t <- solve(t(theta_t) %*% theta_t) %*% t(theta_t) %*% psb_X
-psb_X_hat_t <- theta_t %*% psb_beta_hat_t
-
-psb_mu_g <- colMeans(psb_X)
-
-# Calculate X_regress: X_observed - X_predicted + mu_g
-psb_X_regress_t <- psb_X - psb_X_hat_t
-psb_X_regress_t <- sweep(psb_X_regress_t, 2, psb_mu_g, "+")
-psb_X_regress_t[psb_X_regress_t < 0] <- 0
-
-K_names <- colnames(theta_t)
-G_names <- colnames(psb_X)
-N_names <- rownames(psb_X)
-
-rgr_t_psb <- array(NA,
+if (!"Fraction-Regressed Bulk" %in% names(psb_t_exp)){
+  common_n <- intersect(rownames(psb_X), rownames(lib_t_frac$`Ground Truth`))
+  
+  psb_X <- psb_X[common_n, ]
+  theta_t <- lib_t_frac$`Ground Truth`[common_n, ]
+  
+  psb_beta_hat_t <- solve(t(theta_t) %*% theta_t) %*% t(theta_t) %*% psb_X
+  psb_X_hat_t <- theta_t %*% psb_beta_hat_t
+  
+  psb_mu_g <- colMeans(psb_X)
+  
+  # Calculate X_regress: X_observed - X_predicted + mu_g
+  psb_X_regress_t <- psb_X - psb_X_hat_t
+  psb_X_regress_t <- sweep(psb_X_regress_t, 2, psb_mu_g, "+")
+  psb_X_regress_t[psb_X_regress_t < 0] <- 0
+  
+  K_names <- colnames(theta_t)
+  G_names <- colnames(psb_X)
+  N_names <- rownames(psb_X)
+  
+  psb_t_exp$`Fraction-Regressed Bulk` <- array(NA,
                    dim = c(length(N_names), length(G_names), length(K_names)),
                    dimnames = list(N_names, G_names, K_names))
-
-for(k in K_names) {
-  rgr_t_psb[,,k] <- psb_X_regress_t
+  for(k in K_names) {
+    psb_t_exp$`Fraction-Regressed Bulk`[,,k] <- psb_X_regress_t
+  }
+  
+  rm(common_n, theta_t, psb_beta_hat_t, psb_X_hat_t, psb_X_regress_t, G_names, N_names, K_names)
 }
+
+if (!"BayesPrism" %in% names(psb_t_exp)){psb_t_exp$BayesPrism <- bp_pseudobulk@posterior.initial.cellType@Z}
+
+if (!dp_name %in% names(psb_t_exp)){psb_t_exp[[dp_name]] <- dp_pseudobulk@posterior.initial.cellType@Z}
+
+saveRDS(psb_t_exp, file = paste0(data_dir, "NotebookRData/DynaPrism/", "psb_t_exp.rds"))
 ```
 
 ```{r}
-psb_t_CTSE_rgr <- eval_CTSE(rgr_t_lib, true_t_exp, markers_list = state_marker_list)
+#| label: eval_CTSE_psb_t
+
+if ((!"Plain Bulk" %in% names(psb_t_CTSE)) & ("Plain Bulk" %in% names(psb_t_exp))){psb_t_CTSE$`Plain Bulk` <- eval_CTSE(psb_t_exp$`Plain Bulk`, lib_t_exp$`Ground Truth`, markers_list = state_marker_list)}
+
+if ((!"Fraction-Regressed Bulk" %in% names(psb_t_CTSE)) & ("Fraction-Regressed Bulk" %in% names(psb_t_exp))){psb_t_CTSE$`Fraction-Regressed Bulk` <- eval_CTSE(psb_t_exp$`Fraction-Regressed Bulk`, lib_t_exp$`Ground Truth`, markers_list = state_marker_list)}
+
+if ((!"BayesPrism" %in% names(psb_t_CTSE)) & ("BayesPrism" %in% names(psb_t_exp))){psb_t_CTSE$BayesPrism <- eval_CTSE(psb_t_exp$BayesPrism, lib_t_exp$`Ground Truth`, markers_list = type_marker_list)}
+
+if ((!dp_name %in% names(psb_t_CTSE)) & (dp_name %in% names(psb_t_exp))){psb_t_CTSE[[dp_name]] <- eval_CTSE(psb_t_exp[[dp_name]], lib_t_exp$`Ground Truth`, markers_list = type_marker_list)}
+
+if ((!"Ground Truth" %in% names(psb_t_CTSE)) & ("Ground Truth" %in% names(lib_t_exp))){psb_t_CTSE$`Ground Truth` <- eval_CTSE(lib_t_exp$`Ground Truth`, lib_t_exp$`Ground Truth`, markers_list = type_marker_list)}
+
+saveRDS(psb_t_CTSE, file = paste0(data_dir, "NotebookRData/DynaPrism/", "psb_t_CTSE.rds"))
 ```
 
 ```{r}
-plot_DeltaCTSE(psb_t_CTSE_rgr, psb_t_CTSE_blk, 
-               #title = paste0("BayesPrism Performance Gain"),
-               subtitle = "Pseudobulk",
-               group_colors = type_colors, 
-               mod_name = "Fraction-Regressed Bulk", ori_name = "Plain Bulk")
+#| label: plot_CTSE_psb_t
+plot_dumbbellCTSE(psb_t_CTSE, modified = dp_name, original = "BayesPrism",
+                  subtitle =  "Pseudobulk",
+                  group_colors = type_colors)
 
-plot_DeltaCTSE(psb_t_CTSE_dp, psb_t_CTSE_rgr, 
-               title = paste0("DynaPrism (β = ", dp_res@control_param$gibbs.control$beta, ") Performance Gain over Fraction-Regressed Bulk"),
-               subtitle = "Pseudobulk",
-               group_colors = type_colors, 
-               mod_name = "DynaPrism", ori_name = "Fraction-Regressed Bulk")
+plot_ExpSpe(psb_t_CTSE[[dp_name]], psb_t_CTSE$BayesPrism, gene_pressure, 
+            title = "Type-Level Expression Specificity",
+            subtitle = paste0(dp_name, " on Pseudobulk"),
+            mod_name = dp_name, ori_name = "BayesPrism")
 
-plot_DeltaCTSE(psb_t_CTSE_bp, psb_t_CTSE_rgr, 
-               #title = paste0("BayesPrism Performance Gain"),
+plot_DeltaCTSE(psb_t_CTSE[[dp_name]], psb_t_CTSE$BayesPrism, 
                subtitle = "Pseudobulk",
                group_colors = type_colors, 
-               mod_name = "BayesPrism", ori_name = "Fraction-Regressed Bulk")
+               mod_name = dp_name, ori_name = "BayesPrism")
+
+plot_DeltaCTSE(psb_t_CTSE[[dp_name]], psb_t_CTSE$`DynaPrism (β = 1)`, 
+               subtitle = "Pseudobulk",
+               group_colors = type_colors, 
+               mod_name = dp_name, ori_name = "DynaPrism (β = 1)")
 ```
