@@ -189,7 +189,7 @@ get_trans_correlations_parallel <- function(expr_mat, meta, lig_genes, tar_genes
   }
   
   message("Running trans-correlations...")
-  results_list <-  
+  results_list <- sfLapply(all_labels, cor_worker)
     sfStop()
   
   all_corrs_dt <- rbindlist(results_list)
@@ -199,17 +199,108 @@ get_trans_correlations_parallel <- function(expr_mat, meta, lig_genes, tar_genes
 
 
 
+get_cis_correlations_parallel <- function(expr_mat, meta, lig_genes, tar_genes, n_cores = 6, rho_threshold = 0.1) {
+  
+  # 1. Setup and Alignment
+  lig_genes <- intersect(lig_genes, rownames(expr_mat))
+  tar_genes <- intersect(tar_genes, rownames(expr_mat))
+  
+  all_labels <- unique(meta$Label)
+  samples <- unique(meta$Sample)
+  
+  message(sprintf("Initializing snowfall for cis-correlations with %d cores...", n_cores))
+  sfInit(parallel = TRUE, cpus = n_cores)
+  
+  sfLibrary(stats)
+  sfLibrary(data.table)
+  sfExport("expr_mat", "meta", "lig_genes", "tar_genes", 
+           "samples", "all_labels", "rho_threshold")
+  
+  # 2. The Cis-Worker Function
+  cor_worker <- function(s) {
+    num_samples <- length(samples)
+    
+    # We correlate ligands and targets within the SAME state 's'
+    cis_lig_mat <- matrix(NA, nrow=num_samples, ncol=length(lig_genes), dimnames=list(samples, lig_genes))
+    cis_tar_mat <- matrix(NA, nrow=num_samples, ncol=length(tar_genes), dimnames=list(samples, tar_genes))
+    
+    for(smp in samples){
+      # Identify columns for state 's' in sample 'smp'
+      idx <- which(meta$Sample == smp & meta$Label == s)
+      
+      if(length(idx) > 0) {
+        # Get mean expression of ligands and targets in this sample-state
+        cis_lig_mat[smp, ] <- as.numeric(expr_mat[lig_genes, idx])
+        cis_tar_mat[smp, ] <- as.numeric(expr_mat[tar_genes, idx])
+      }
+    }
+    
+    # Filter for variance (must vary across at least 2 samples)
+    v_lig <- apply(cis_lig_mat, 2, function(x) sd(x, na.rm=TRUE))
+    v_tar <- apply(cis_tar_mat, 2, function(x) sd(x, na.rm=TRUE))
+    
+    valid_ligs <- names(v_lig[!is.na(v_lig) & v_lig > 0])
+    valid_tars <- names(v_tar[!is.na(v_tar) & v_tar > 0])
+    
+    if(length(valid_ligs) < 2 || length(valid_tars) < 2) return(NULL)
+    
+    # Compute Spearman Correlation Matrix (Cis)
+    rho_mtx <- cor(cis_lig_mat[, valid_ligs, drop=FALSE], 
+                   cis_tar_mat[, valid_tars, drop=FALSE], 
+                   method = "spearman", 
+                   use = "pairwise.complete.obs")
+    
+    # Memory efficient hit detection
+    hit_idx <- which(abs(rho_mtx) > rho_threshold, arr.ind = TRUE)
+    if(nrow(hit_idx) == 0) return(NULL)
+    
+    sig_rhos <- rho_mtx[hit_idx]
+    
+    # P-value calculation (t-distribution)
+    n_eff <- nrow(cis_lig_mat)
+    t_vals <- sig_rhos * sqrt((n_eff - 2) / (1 - sig_rhos^2))
+    sig_pvals <- 2 * pt(-abs(t_vals), df = n_eff - 2)
+    
+    # Build data.table
+    res <- data.table(
+      Receiver = s,  # In Cis, sender and receiver are the same
+      Ligand   = rownames(rho_mtx)[hit_idx[, 1]],
+      Gene     = colnames(rho_mtx)[hit_idx[, 2]],
+      Rho      = sig_rhos,
+      Pval     = sig_pvals
+    )
+    
+    rm(rho_mtx, hit_idx, t_vals)
+    return(res)
+  }
+  
+  # 3. Execute
+  message("Running parallel cis-correlations...")
+  results_list <- sfLapply(all_labels, cor_worker)
+  sfStop()
+  
+  # 4. Combine
+  all_corrs_dt <- rbindlist(results_list)
+  return(all_corrs_dt)
+}
+
+
+
 compute_stouffer_consensus <- function(cor_dt) {
   message("Calculating Stouffer consensus and consistency statistics...")
   
   # Ensure the input is a data.table
-  if (!is.data.table(cor_dt)) setDT(cor_dt)
+  if (!is.data.table(cor_dt)) {
+    # Check if we are passing a data frame or if columns exist
+    cor_dt <- as.data.table(cor_dt)
+  }
   
-  # Group by Ligand and Target (Gene) to calculate statistics across all receivers
+  # Group by Ligand and Gene
   consensus_dt <- cor_dt[, {
     # Calculate individual Z-scores (Stabilized)
     # Using lower.tail = FALSE and 1e-15 to prevent Infinity
-    zs <- qnorm(pmax(Pval, 1e-15) / 2, lower.tail = FALSE) * sign(Rho)
+    current_p <- pmax(Pval, 1e-15)
+    zs <- qnorm(current_p / 2, lower.tail = FALSE) * sign(Rho)
     zs[!is.finite(zs)] <- 0
     
     # Count observations
@@ -220,17 +311,16 @@ compute_stouffer_consensus <- function(cor_dt) {
     neg_count <- sum(Rho < 0, na.rm = TRUE)
     consist_val <- max(pos_count, neg_count) / n_val
     
-    # Return the aggregated row
+    # Return the aggregated row with requested column names
     .(
       n_labels    = n_val,
       StoufferZ   = sum(zs, na.rm = TRUE) / sqrt(n_val),
       Consistency = consist_val,
       AvgRho      = mean(Rho, na.rm = TRUE)
     )
-  }, by = .(Ligand, Target = Gene)] # Renaming Gene to Target per your request
+  }, by = .(Ligand, Gene)]
   
-  # Sort by absolute Z-score for easy inspection
-  setorder(consensus_dt, -abs(StoufferZ))
+  consensus_dt <- consensus_dt[order(-abs(StoufferZ))]
   
   return(consensus_dt)
 }
@@ -245,16 +335,23 @@ get_standardized_intensity <- function(phi_mtx, target_sum = 1e4, log_base = exp
 
 
 
-build_Omega <- function(phi, ligand_target_matrix, C_tsr, lr_network, 
+build_Omega <- function(phi, ligand_target_matrix, C_input, lr_network, 
                         mask_threshold = 0.1, masking_type = "soft"){
   
-  C_tsr[is.na(C_tsr)] <- 0
+  match.arg(masking_type, c("hard", "soft"))
   
   # Standardize the Reference Intensity by converting the linear probabilities (phi) to log-intensities
   avg_expr <- get_standardized_intensity(phi)
-  
   label_names <- rownames(avg_expr)
-  match.arg(masking_type, c("hard", "soft"))
+  
+  # Prepare C context data
+  is_tensor <- (length(dim(C_input)) == 3)
+  if(is_tensor) {
+    message("Using State-Specific Context Tensor (C_slg)")
+  } else {
+    message("Using Global Consensus Context Matrix (C_lg)")
+  }
+  C_input[is.na(C_input)] <- 0
   
   # Identify common ligands and target genes
   common_ligands <- intersect(colnames(ligand_target_matrix), colnames(avg_expr))
@@ -298,7 +395,11 @@ build_Omega <- function(phi, ligand_target_matrix, C_tsr, lr_network,
   
   for(s in label_names) {
     # Get the Context slice for this specific receiver [Ligands x Genes]
-    C_slice <- C_tsr[s, common_ligands, common_genes]
+    if(is_tensor) {
+      C_slice <- C_input[s, common_ligands, common_genes]
+    } else {
+      C_slice <- C_input[common_ligands, common_genes]
+    }
     
     # Weight the NicheNet prior by the observed context
     signed_W_slice <- W_matrix * C_slice 

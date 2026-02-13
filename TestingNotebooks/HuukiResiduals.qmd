@@ -39,6 +39,12 @@ Global variables
 data_dir <- "../data/"
 dir.exists(data_dir)
 ```
+```{r}
+#| label: ntfy_setup
+library("httr")
+ntfy_topic <- "A01422880"
+```
+
 
 # 1. Loading Data
 
@@ -82,10 +88,10 @@ Getting lists of cell types and cell states.
 ```{r}
 #| label: cell_lists
 # Removing ambiguous cell type
-cell_types <- names(table(sce$cellType_broad_hc))
-cell_types <- cell_types[!cell_types %in% c("Ambiguous")]
-sce <- sce[, sce$cellType_broad_hc %in% cell_types]
-cell_states <- unique(as.vector(sce$cellType_hc))
+all_types <- names(table(sce$cellType_broad_hc))
+all_types <- all_types[!all_types %in% c("Ambiguous")]
+sce <- sce[, sce$cellType_broad_hc %in% all_types]
+all_states <- unique(as.vector(sce$cellType_hc))
 ```
 
 Graphing correlation across cell states
@@ -257,15 +263,15 @@ Calculating expressions per cell state
 ```{r}
 #| label: exp_mtxs
 #| eval: false
-inf_exp_mtx <- matrix(nrow = length(cell_states), 
+inf_exp_mtx <- matrix(nrow = length(all_states), 
                        ncol = length(colnames(bp_res@prism@mixture)),
-                       dimnames = list(cell_states, colnames(bp_res@prism@mixture)))
+                       dimnames = list(all_states, colnames(bp_res@prism@mixture)))
 
-true_exp_mtx <- matrix(nrow = length(cell_states), 
+true_exp_mtx <- matrix(nrow = length(all_states), 
                        ncol = length(rownames(sce)),
-                       dimnames = list(cell_states, rownames(sce)))
+                       dimnames = list(all_states, rownames(sce)))
 
-for (rec in cell_states){
+for (rec in all_states){
   ids <- colnames(blk_sample[,blk_sample$library_prep == lib_prep & blk_sample$library_type == lib_type])
   rec_idx <- colnames(sce)[sce$cellType_hc == rec & sce$Sample == sample]
   
@@ -296,10 +302,10 @@ Calculating CPM and residuals
 
 ```{r}
 #| label: residual_calc
-inf_cpm_mtx <- (inf_exp_mtx/rowSums(inf_exp_mtx)) * 1e6
-true_cpm_mtx <- (true_exp_mtx/rowSums(true_exp_mtx)) * 1e6
+inf_cpm_mtx <- (inf_exp_mtx/rowSums(inf_exp_mtx)) * 1e4
+true_cpm_mtx <- (true_exp_mtx/rowSums(true_exp_mtx)) * 1e4
 
-residual_mtx <- true_cpm_mtx[cell_states, colnames(inf_cpm_mtx)] - inf_cpm_mtx[cell_states, ]
+residual_mtx <- true_cpm_mtx[all_states, colnames(inf_cpm_mtx)] - inf_cpm_mtx[all_states, ]
 ```
 
 # 5. Getting Omega Tensor
@@ -328,7 +334,7 @@ load(paste0(data_dir, "NotebookRData/HuukiResiduals/", "avg_type_expr.rdata"))
 load(paste0(data_dir, "NotebookRData/HuukiResiduals/", "avg_state_expr.rdata"))
 ```
 
-## 5.2 Directionality
+## 5.2a Directionality
 
 Getting average expression per sample per cell type
 
@@ -352,6 +358,45 @@ load(paste0(data_dir, "NotebookRData/HuukiResiduals/", "state_sample_means.rdata
 #| label: state_sample_mtx
 expr_mat <- assays(state_sample_means)$logcounts
 meta <- as.data.frame(colData(state_sample_means))
+```
+
+```{r}
+#| label: load_type_sample_counts
+type_sample_counts <- readRDS(paste0(data_dir, "NotebookRData/HuukiResiduals/", "type_sample_counts.rds"))
+```
+
+
+
+```{r}
+# Calculate Spearman correlation for each ligand
+cor_results <- cor_df %>%
+  group_by(lig) %>%
+  dplyr::summarize(
+    spearman_rho = cor(lig_exp, tar_exp, method = "spearman", use = "complete.obs"),
+    p_value = cor.test(lig_exp, tar_exp, method = "spearman")$p.value
+  ) %>%
+  arrange(desc(spearman_rho))
+
+C_tsr[receiver, cor_results$lig, target] <- cor_results$spearman_rho
+```
+
+```{r}
+cor_df <- merge(
+  cor_df, 
+  cor_results, 
+  by = "lig"
+)
+```
+
+```{r}
+plot_df <- cor_df[cor_df$p_value < 0.002 & !is.na(cor_df$spearman_rho),]
+
+ggplot(plot_df, aes(x = tar_exp, y = lig_exp, colour = lig)) +
+  geom_point(alpha = 0.8) +
+  geom_smooth(method = "lm") +
+  labs(
+    x = paste0(target, " logcounts on ", receiver)
+  )
 ```
 
 Getting ligand-target correlations across cell states
@@ -421,6 +466,8 @@ all_cors_dt <- rbindlist(lapply(result_files, function(f) {
 }))
 
 setkey(all_cors_dt, ligand, target, state)
+
+x <- readRDS(paste0(data_dir, "NotebookRData/HuukiResiduals/correlation_results/", "Astro_cors.rds"))
 ```
 
 Define directionality consensus scores across cell states
@@ -463,25 +510,55 @@ load(paste0(data_dir, "NotebookRData/Huukiresiduals/", "consensus_summary.rdata"
 
 Visualizing consensus data
 ```{r}
-#| label: fig-dir_histogram
-#| fig-cap: "Histogram of directionality Z scores. Consensus score represents the direction of gene correlations across cell states,"
-ggside(consensus_summary, mapping = aes(x = (consensus_z))) +
-  geom_histogram(bins = 100)
+stack_vertical() +
+  ggplot(consensus_summary) +
+  geom_density(mapping = aes(consensus_z/max(abs(consensus_summary$consensus_z), na.rm = TRUE))) +
+  labs(x = "MaxAbs-Normalized Cis-Z") +
+  
+  ggplot(consensus_summary) +
+  geom_density(mapping = aes(avg_cor)) +
+  labs(x = "Average Cis-Correlation")
 ```
 
 ```{r}
-#| label: fig-dir_vs_consisntency
-#| fig-cap: "Directionality z scores vs, consistency. Consistency represents what percentage of cell states showed a consistent directionality."
-ggside(consensus_summary[consensus_summary$ligand %in% ligand_genes[c(1:5)]], mapping = aes(x = consensus_z, y = consistency, color = n_states)) +
-  geom_point(alpha = 0.5) +
-  labs(x = "z-Score", y = "Consistency") + 
-  anno_top(size = 0.3) +
-  ggalign() +
-  geom_density(aes(consensus_z, y = after_stat(density)), position = "stack") +
+set.seed(111) # For reproducibility
+
+norm_constant <- quantile(abs(consensus_summary$consensus_z), 0.95, na.rm = TRUE)
+
+# 1. Pick 10 random unique ligands
+subset_ligands <- unique(consensus_summary$ligand)# c(names(sort(rowMeans(cC_mtx, na.rm = TRUE), decreasing = TRUE)[c(1:3)]), names(sort(abs(rowMeans(cC_mtx, na.rm = TRUE)), decreasing = FALSE)[c(1:3)]), names(sort(rowMeans(cC_mtx, na.rm = TRUE), decreasing = FALSE)[c(1:3)]))#sample(unique(consensus_summary$ligand), 1000) 
+#
+
+# 2. Pick 100 random unique targets
+subset_targets <- sample(unique(consensus_summary$target), 2000) # c(names(sort((colMeans(cC_mtx, na.rm = FALSE)), decreasing = TRUE)[c(1:100)]), names(sort((colMeans(cC_mtx, na.rm = FALSE)), decreasing = FALSE)[c(1:100)]))
+  # unique(consensus_summary$target)#
+
+# 3. Filter the main table for these specific groups
+subset_dt <- consensus_summary[ligand %in% subset_ligands & target %in% subset_targets
+                               & consistency >= 0.5
+                               & consensus_z <= quantile(abs(consensus_summary$consensus_z), 0.99, na.rm = TRUE)
+                               ]
+
+ggside(subset_dt, mapping = aes(x = consensus_z/norm_constant, y = avg_cor, colour = consistency, alpha = n_states, size = n_states)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray70") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray70") +
+  geom_point() +
+  scale_color_viridis_c(option = "turbo") +
+  scale_size_continuous(range = c(0.2, 2.5)) + 
+  scale_alpha_continuous(range = c(0.3, 0.8)) +
+  #scale_color_gradient(low = "grey", high = "darkgreen") +
+  labs(x = "Q0.95Abs-Normalized Cis-Z", y = "Average Cis-Correlation") +
+  
   anno_right(size = 0.3) +
   ggalign() +
-  geom_density(aes(x = after_stat(density), y = consistency), position = "stack")
+  geom_density(aes(x = after_stat(density), y = avg_cor), position = "stack")+
+  
+  anno_top(size = 0.3) +
+  ggalign() +
+  geom_density(aes(x = consensus_z/norm_constant, y = after_stat(density)), position = "stack")
 ```
+
+
 
 Aggregating consensus scores into a directionality matrix
 
@@ -522,18 +599,418 @@ norm_dir_mtx[which(is.na(norm_dir_mtx))] <- mean(norm_dir_mtx, na.rm=TRUE)
 cor_W_mtx <- norm_dir_mtx * W_matrix
 ```
 
+## 5.2b Context Matrix
+
+### 5.2b.1 State-level
+
+```{r}
+#| label: get_state_sample_counts
+tryCatch({
+  state_sample_counts <- aggregate_stratified_counts(t(assay(sce, "counts")), sce$Sample, sce$cellType_hc, include_pseudobulk = TRUE)
+  saveRDS(state_sample_counts, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", "state_sample_counts.rds"))
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = "Saved state_sample_counts successfully ✅",
+       add_headers(Title = "R Process Success")
+       )
+}, error = function(e) {
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = paste0("Getting state_sample_counts failed: ", e$message),
+       add_headers(Title = "R Process ERROR ❌", Priotity = "high")
+       )
+})
+```
+
+```{r}
+#| label: load_state_sample_counts
+state_sample_counts <- readRDS(paste0(data_dir, "NotebookRData/HuukiResiduals/", "state_sample_counts.rds"))
+```
+
+```{r}
+#| label: identify_ligs_n_tars
+lig_genes <- intersect(colnames(ligand_target_matrix), rownames(state_sample_counts$logexpr))
+tar_genes <- intersect(rownames(ligand_target_matrix), rownames(state_sample_counts$logexpr))
+```
+
+```{r}
+#| label: get_state_cors
+tryCatch({
+  corr_s <- get_trans_correlations_parallel(expr_mat = state_sample_counts$logexpr, 
+                                           meta = state_sample_counts$meta, 
+                                           lig_genes = lig_genes, 
+                                           tar_genes = tar_genes, 
+                                           n_cores = 8, 
+                                           rho_threshold = 0)
+  saveRDS(corr_s, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", "corr_s_dt.rds"))
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = "Saved corr_s successfully ✅",
+       add_headers(Title = "R Process Success")
+       )
+}, error = function(e) {
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = paste0("Getting corr_s failed: ", e$message),
+       add_headers(Title = "R Process ERROR ❌", Priotity = "high")
+       )
+})
+```
+```{r}
+#| label: load_state_cors
+
+corr_s <- readRDS(paste0(data_dir, "NotebookRData/HuukiResiduals/", "corr_s_dt.rds"))
+```
+
+```{r}
+#| label: get_state_consensus
+tryCatch({
+  tConsensus_s <- compute_stouffer_consensus(corr_s)
+  saveRDS(tConsensus_s, file = paste0(data_dir, "NotebookRData/HuukiResiduals/", "tConsensus_s.rds"))
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = "Saved tConsensus_s successfully ✅",
+       add_headers(Title = "R Process Success")
+       )
+}, error = function(e) {
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = paste0("Getting tConsensus_s  failed: ", e$message),
+       add_headers(Title = "R Process ERROR ❌", Priotity = "high")
+       )
+})
+```
+
+```{r}
+#| label: load_state_consensus
+tConsensus_s <- readRDS(paste0(data_dir, "NotebookRData/HuukiResiduals/", "tConsensus_s.rds"))
+```
+
+```{r}
+#| label: visualize_state_consensus
+
+set.seed(111) # For reproducibility
+
+norm_constant <- quantile(abs(tConsensus_s$StoufferZ), 0.95, na.rm = TRUE)
+
+subset_ligands <- unique(tConsensus_s$Ligand)# c(names(sort(rowMeans(cC_mtx, na.rm = TRUE), decreasing = TRUE)[c(1:3)]), names(sort(abs(rowMeans(cC_mtx, na.rm = TRUE)), decreasing = FALSE)[c(1:3)]), names(sort(rowMeans(cC_mtx, na.rm = TRUE), decreasing = FALSE)[c(1:3)]))#sample(unique(consensus_summary$ligand), 1000) 
+#
+
+subset_targets <- sample(unique(tConsensus_s$Gene), 2000) # c(names(sort((colMeans(cC_mtx, na.rm = FALSE)), decreasing = TRUE)[c(1:100)]), names(sort((colMeans(cC_mtx, na.rm = FALSE)), decreasing = FALSE)[c(1:100)]))
+  # unique(consensus_summary$target)#
+
+subset_dt <- tConsensus_s[Ligand %in% subset_ligands & Gene %in% subset_targets
+                         #& StoufferZ <= quantile((tConsensus_s$StoufferZ), 0.95, na.rm = TRUE)
+                         #& StoufferZ >= quantile((tConsensus_s$StoufferZ), 0.05, na.rm = TRUE)
+                         ]
+
+subset_dt <- subset_dt %>%
+  mutate(Consistency_Range = cut(Consistency, 
+                                 breaks = seq(0.5, 1.0, by = 0.5/7), 
+                                 include.lowest = TRUE))
+consistency_bins <- length(unique(subset_dt$Consistency_Range))
+
+ggside(subset_dt, mapping = aes(x = StoufferZ/norm_constant, y = AvgRho, colour = Consistency, alpha = n_labels, size = n_labels)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray70") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray70") +
+  geom_point() +
+  scale_color_viridis_c(option = "turbo") +
+  scale_size_continuous(range = c(0.2, 2.5)) + 
+  scale_alpha_continuous(range = c(0.3, 0.8)) +
+  #scale_color_gradient(low = "grey", high = "darkgreen") +
+  labs(x = "Q0.95-Normalized Trans-Z", y = "Average Trans-Correlation") +
+  
+  anno_right(size = 0.3) +
+  ggalign() +
+  geom_density(aes(x = after_stat(density), y = AvgRho, 
+                   colour = Consistency_Range), 
+               position = "identity") +
+  scale_color_manual(values = turbo(consistency_bins), guide = "none") +
+  
+  anno_top(size = 0.3) +
+  ggalign() +
+  geom_density(aes(x = StoufferZ/norm_constant, y = after_stat(density), 
+                   colour = Consistency_Range), 
+               position = "identity") +
+  scale_color_manual(values = turbo(consistency_bins), guide = "none")
+```
+
+```{r}
+#| label: get_state_C
+norm_factor <- quantile(abs(tConsensus_s$StoufferZ), 0.95, na.rm = TRUE)
+tConsensus_s[, Z_norm := StoufferZ / norm_factor]
+
+C_s_tmp <- dcast(tConsensus_s, Ligand ~ Gene, value.var = "Z_norm", fill = 0)
+
+C_s_mtx <- as.matrix(C_s_tmp[, -1])
+rownames(C_s_mtx) <- C_s_tmp$Ligand
+
+rm(C_s_tmp)
+```
+
+### 5.2b.2 Type-level
+
+```{r}
+#| label: get_type_sample_counts
+
+tryCatch({
+  type_sample_counts <- aggregate_stratified_counts(t(assay(sce, "counts")), sce$Sample, sce$cellType_broad_hc, include_pseudobulk = TRUE)
+  saveRDS(type_sample_counts, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", "type_sample_counts.rds"))
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = "Saved type_sample_counts successfully ✅",
+       add_headers(Title = "R Process Success")
+       )
+}, error = function(e) {
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = paste0("Getting type_sample_counts failed: ", e$message),
+       add_headers(Title = "R Process ERROR ❌", Priotity = "high")
+       )
+})
+
+```
+
+```{r}
+#| label: load_type_sample_counts
+type_sample_counts <- readRDS(paste0(data_dir, "NotebookRData/HuukiResiduals/", "type_sample_counts.rds"))
+```
+
+```{r}
+#| label: get_type_cors
+tryCatch({
+  corr_t <- get_trans_correlations_parallel(expr_mat = type_sample_counts$logexpr, 
+                                           meta = type_sample_counts$meta, 
+                                           lig_genes = lig_genes, 
+                                           tar_genes = tar_genes, 
+                                           n_cores = 8, 
+                                           rho_threshold = 0)
+  saveRDS(corr_t, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", "corr_t_dt.rds"))
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = "Saved corr_t successfully ✅",
+       add_headers(Title = "R Process Success")
+       )
+}, error = function(e) {
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = paste0("Getting corr_t failed: ", e$message),
+       add_headers(Title = "R Process ERROR ❌", Priotity = "high")
+       )
+})
+```
+
+```{r}
+#| label: load_type_cors
+corr_t <- readRDS(paste0(data_dir, "NotebookRData/HuukiResiduals/", "corr_t_dt.rds"))
+```
+
+```{r}
+#| label: get_type_consensus
+tryCatch({
+  tConsensus_t <- compute_stouffer_consensus(corr_t)
+  saveRDS(tConsensus_t, file = paste0(data_dir, "NotebookRData/HuukiResiduals/", "tConsensus_t.rds"))
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = "Saved tConsensus_t successfully ✅",
+       add_headers(Title = "R Process Success")
+       )
+}, error = function(e) {
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = paste0("Getting tConsensus_t  failed: ", e$message),
+       add_headers(Title = "R Process ERROR ❌", Priotity = "high")
+       )
+})
+```
+
+```{r}
+#| label: load_type_consensus
+tConsensus_t <- readRDS(paste0(data_dir, "NotebookRData/HuukiResiduals/", "tConsensus_t.rds"))
+```
+
+```{r}
+#| label: visualize_type_consensus
+
+set.seed(111) # For reproducibility
+
+norm_constant <- quantile(abs(tConsensus_t$StoufferZ), 0.95, na.rm = TRUE)
+
+subset_ligands <- unique(tConsensus_t$Ligand)# c(names(sort(rowMeans(cC_mtx, na.rm = TRUE), decreasing = TRUE)[c(1:3)]), names(sort(abs(rowMeans(cC_mtx, na.rm = TRUE)), decreasing = FALSE)[c(1:3)]), names(sort(rowMeans(cC_mtx, na.rm = TRUE), decreasing = FALSE)[c(1:3)]))#sample(unique(consensus_summary$ligand), 1000) 
+#
+
+subset_targets <- sample(unique(tConsensus_t$Gene), 2000) # c(names(sort((colMeans(cC_mtx, na.rm = FALSE)), decreasing = TRUE)[c(1:100)]), names(sort((colMeans(cC_mtx, na.rm = FALSE)), decreasing = FALSE)[c(1:100)]))
+  # unique(consensus_summary$target)#
+
+subset_dt <- tConsensus_t[Ligand %in% subset_ligands & Gene %in% subset_targets
+                         #& StoufferZ <= quantile((tConsensus_s$StoufferZ), 0.95, na.rm = TRUE)
+                         #& StoufferZ >= quantile((tConsensus_s$StoufferZ), 0.05, na.rm = TRUE)
+                         ]
+
+subset_dt <- subset_dt %>%
+  mutate(Consistency_Range = cut(Consistency, 
+                                 breaks = seq(0.5, 1.0, by = 0.5/7), 
+                                 include.lowest = TRUE))
+consistency_bins <- length(unique(subset_dt$Consistency_Range))
+
+ggside(subset_dt, mapping = aes(x = StoufferZ/norm_constant, y = AvgRho, colour = Consistency, alpha = n_labels, size = n_labels)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray70") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray70") +
+  geom_point() +
+  scale_color_viridis_c(option = "turbo") +
+  scale_size_continuous(range = c(0.2, 2.5)) + 
+  scale_alpha_continuous(range = c(0.3, 0.8)) +
+  #scale_color_gradient(low = "grey", high = "darkgreen") +
+  labs(x = "Q0.95-Normalized Trans-Z", y = "Average Trans-Correlation") +
+  
+  anno_right(size = 0.3) +
+  ggalign() +
+  geom_density(aes(x = after_stat(density), y = AvgRho, 
+                   colour = Consistency_Range), 
+               position = "identity") +
+  scale_color_manual(values = turbo(consistency_bins), guide = "none") +
+  
+  anno_top(size = 0.3) +
+  ggalign() +
+  geom_density(aes(x = StoufferZ/norm_constant, y = after_stat(density), 
+                   colour = Consistency_Range), 
+               position = "identity") +
+  scale_color_manual(values = turbo(consistency_bins), guide = "none")
+```
+
+```{r}
+#| label: get_type_C
+norm_factor <- quantile(abs(tConsensus_t$StoufferZ), 0.95, na.rm = TRUE)
+tConsensus_t[, Z_norm := StoufferZ / norm_factor]
+
+C_t_tmp <- dcast(tConsensus_t, Ligand ~ Gene, value.var = "Z_norm", fill = 0)
+
+C_t_mtx <- as.matrix(C_t_tmp[, -1])
+rownames(C_t_mtx) <- C_t_tmp$Ligand
+
+rm(C_t_tmp)
+```
 
 ## 5.3 Omega tensor
 
 ```{r}
-#| label: omega
-Omega <- build_Omega(avg_state_expr, t(cor_W_mtx), lr_network, mask_threshold = 0.1, masking_type = "soft")
+#| label: get_Omega_s
+
+tryCatch({
+  Omega_s <- build_Omega(phi = myPrism@phi_cellState@phi, 
+                         ligand_target_matrix = (ligand_target_matrix), 
+                         C_input = ((C_s_mtx)), 
+                         lr_network = lr_network, 
+                         mask_threshold = 0.5, 
+                         masking_type = "soft")
+  saveRDS(Omega_s, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", "Omega_s.rds"))
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = "Saved Omega_s successfully ✅",
+       add_headers(Title = "R Process Success")
+       )
+}, error = function(e) {
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = paste0("Getting Omega_s failed: ", e$message),
+       add_headers(Title = "R Process ERROR ❌", Priotity = "high")
+       )
+})
+```
+
+```{r}
+omega_s_df <- as.data.frame.table(Omega_s)
+colnames(omega_s_df) <- c("Sender", "Receiver", "Ligand", "Potential")
+
+omega_s_filtered <- omega_s_df %>% 
+  filter(
+    Potential != 0,
+    Potential > quantile(Potential, 0.05, na.rm = TRUE),
+    #Potential > -1,
+    Potential < quantile(Potential, 0.95, na.rm = TRUE)
+    #Potential < 1
+  ) %>% 
+  mutate(Receiver = as.character(Receiver)) %>% 
+  arrange(Receiver) %>% 
+  mutate(Receiver = factor(Receiver, levels = unique(Receiver)))
+```
+
+```{r}
+ggplot(omega_s_filtered, aes(x = Potential, fill = Receiver, color = Receiver)) +
+  geom_density(alpha = 0.5) +
+  facet_grid(Receiver ~ ., scales = "free_y", switch = "y") +
+  #geom_vline(xintercept = mean(omega_df_filtered$Potential), linetype = "dashed", color = "red") +
+  theme_minimal() +
+  scale_fill_manual(values = state_colors) +
+  scale_color_manual(values = state_colors) +
+  labs(title = "Distribution of Signed Interaction Potentials (Omega)",
+       subtitle = "Filtered for non-zero interactions",
+       x = "Regulatory Potential",
+       y = "Count of Gene-State Pairs") +
+  theme(
+    strip.text.y.left = element_text(angle = 0, hjust = 1, size = 8), # Horizontal labels
+    strip.background = element_blank(),
+    panel.spacing = unit(0.1, "lines"), # Bring them close together
+    axis.text.y = element_blank(),      # Hide the internal density axis
+    axis.ticks.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+  )
+```
+
+```{r}
+#| label: get_Omega_t
+
+tryCatch({
+  Omega_t <- build_Omega(phi = myPrism@phi_cellType@phi, 
+                         ligand_target_matrix = (ligand_target_matrix), 
+                         C_input = ((C_t_mtx)), 
+                         lr_network = lr_network, 
+                         mask_threshold = 0.5, 
+                         masking_type = "soft")
+  saveRDS(Omega_t, file=paste0(data_dir, "NotebookRData/HuukiResiduals/", "Omega_t.rds"))
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = "Saved Omega_t successfully ✅",
+       add_headers(Title = "R Process Success")
+       )
+}, error = function(e) {
+  POST(paste0("https://ntfy.sh/", ntfy_topic),
+       body = paste0("Getting Omega_t failed: ", e$message),
+       add_headers(Title = "R Process ERROR ❌", Priotity = "high")
+       )
+})
+```
+
+```{r}
+omega_t_df <- as.data.frame.table(Omega_t)
+colnames(omega_t_df) <- c("Sender", "Receiver", "Ligand", "Potential")
+
+omega_t_filtered <- omega_t_df %>% 
+  filter(
+    Potential != 0,
+    Potential > quantile(Potential, 0.05, na.rm = TRUE),
+    #Potential > -1,
+    Potential < quantile(Potential, 0.95, na.rm = TRUE)
+    #Potential < 1
+  ) %>% 
+  mutate(Receiver = as.character(Receiver)) %>% 
+  arrange(Receiver) %>% 
+  mutate(Receiver = factor(Receiver, levels = unique(Receiver)))
+```
+
+```{r}
+ggplot(omega_t_filtered, aes(x = Potential, fill = Receiver, color = Receiver)) +
+  geom_density(alpha = 0.5) +
+  facet_grid(Receiver ~ ., scales = "free_y", switch = "y") +
+  #geom_vline(xintercept = mean(omega_df_filtered$Potential), linetype = "dashed", color = "red") +
+  theme_minimal() +
+  scale_fill_manual(values = type_colors) +
+  scale_color_manual(values = type_colors) +
+  labs(title = "Distribution of Signed Interaction Potentials (Omega)",
+       subtitle = "Filtered for non-zero interactions",
+       x = "Regulatory Potential",
+       y = "Count of Gene-Type Pairs") +
+  theme(
+    strip.text.y.left = element_text(angle = 0, hjust = 1, size = 8), # Horizontal labels
+    strip.background = element_blank(),
+    panel.spacing = unit(0.1, "lines"), # Bring them close together
+    axis.text.y = element_blank(),      # Hide the internal density axis
+    axis.ticks.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+  )
 ```
 
 ```{r}
 #| label: omega_summaries
-niche_strength <- apply(Omega, c(1,2), sum)
-gene_pressure <- apply(Omega, c(2,3), sum)
+niche_strength <- apply(Omega_s, c(1,2), sum)
+gene_pressure <- apply(Omega_s, c(2,3), sum)
 ```
 
 Visualization
@@ -557,9 +1034,9 @@ ggheatmap(niche_strength) +
 ```{r}
 #| label: weigh_omega
 avg_props <- table(sce$cellType_hc) / ncol(sce)
-Weighted_Omega <- Omega
+Weighted_Omega <- Omega_s
 
-for(k in cell_states){
+for(k in all_states){
   Weighted_Omega[k, , ] <- Weighted_Omega[k, , ] * avg_props[k]
 }
 
@@ -641,19 +1118,19 @@ plot_df <- aggregated_df[aggregated_df$type %in% types_to_plot
 #plot_df$gene_pressure <- abs(plot_df$gene_pressure)
 #plot_df$weighted_gene_pressure <- abs(plot_df$weighted_gene_pressure)
 
-plot_df <- plot_df[(plot_df$gene_pressure) < quantile(plot_df$gene_pressure, 0.975)
-                   & (plot_df$gene_pressure) > quantile(plot_df$gene_pressure, 0.025)
-                   & plot_df$residual < quantile(plot_df$residual, 0.975)
-                   & plot_df$residual > quantile(plot_df$residual, 0.025)
+plot_df <- plot_df[(plot_df$gene_pressure) < quantile(plot_df$gene_pressure, 0.99)
+                   & (plot_df$gene_pressure) > quantile(plot_df$gene_pressure, 0.01)
+                   #& plot_df$residual < quantile(plot_df$residual, 0.95)
+                   #& plot_df$residual > quantile(plot_df$residual, 0.05)
                    , ]
 
 # test
 plot_df$test <- sample(plot_df$gene_pressure)
 
 # DIRECTIONALITY
-#plot_df$residual <- (plot_df$residual)
-#plot_df$gene_pressure <- (plot_df$gene_pressure)
-#plot_df$weighted_gene_pressure <- (plot_df$weighted_gene_pressure)
+#plot_df$residual <- abs(plot_df$residual)
+#plot_df$gene_pressure <- abs(plot_df$gene_pressure)
+#plot_df$weighted_gene_pressure <- abs(plot_df$weighted_gene_pressure)
 #directional_mask <- plot_df$residual/abs(plot_df$residual)
 #plot_df$gene_pressure <- plot_df$gene_pressure * directional_mask
 #plot_df$weighted_gene_pressure <- plot_df$weighted_gene_pressure * directional_mask
@@ -671,28 +1148,28 @@ Gene pressure plots
 ggside(plot_df, mapping = aes(gene_pressure, (residual), colour = type)) -
   scheme_theme(theme_bw()) +
   layout_theme(panel.border = element_blank()) +
-  geom_point(size = 0.1) +
+  geom_point(size = 1) +
   scale_color_manual(values = type_colors) +
   geom_smooth(method = "lm", color = "darkgray") +
   labs(y = "Error") + 
   # Density plot
   anno_bottom(size = 0.3) +
   ggalign() +
-  geom_density(aes(x = gene_pressure, y = after_stat(density), colour = type), position = "stack") +
-  scale_color_manual(values = type_colors) +
+  geom_density(aes(x = gene_pressure, y = after_stat(density), colour = type), position = "identity") +
+  scale_color_manual(values = type_colors, guide = "none") +
   #labs(title = paste("Effect of Gene Pressure on BayesPrism Error"))+
   # Density plot
   anno_right(size = 0.1) +
   ggalign() +
-  geom_density(aes(x = after_stat(density), y = residual, colour = type), position = "stack") +
-  scale_color_manual(values = type_colors) +
+  geom_density(aes(x = after_stat(density), y = residual, colour = type), position = "identity") +
+  scale_color_manual(values = type_colors, guide = "none") +
   theme(axis.text.x = element_text(angle = -90, vjust = 0.5, hjust = 0)) +
   # Bar plot
   anno_top(size = 1) +
   ggalign() +
   stat_summary_bin(
     mapping = aes(x = gene_pressure, y = (residual), fill = after_stat(count)),
-    bins = 30,
+    bins = 50,
     geom = "bar",
     fun.data = function(x) {
       data.frame(
@@ -725,7 +1202,7 @@ ggside(plot_df, mapping = aes(weighted_gene_pressure, (residual), colour = type)
   ggalign() +
   stat_summary_bin(
     mapping = aes(x = weighted_gene_pressure, y = (residual), fill = after_stat(count)),
-    bins = 30,
+    bins = 50,
     geom = "bar",
     fun.data = function(x) {
       data.frame(
