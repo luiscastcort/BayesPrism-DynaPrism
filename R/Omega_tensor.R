@@ -170,7 +170,8 @@ get_trans_correlations_parallel <- function(expr_mat, meta, lig_genes, tar_genes
     sig_rhos <- rho_mtx[hit_idx]
     
     # Calculate P-values only for the hits
-    n_eff <- nrow(eff_niche_lig_mat)
+    complete_rows <- complete.cases(eff_niche_lig_mat) & complete.cases(rec_tar_mat)
+    n_eff <- sum(complete_rows)
     t_vals <- sig_rhos * sqrt((n_eff - 2) / (1 - sig_rhos^2))
     sig_pvals <- 2 * pt(-abs(t_vals), df = n_eff - 2)
     
