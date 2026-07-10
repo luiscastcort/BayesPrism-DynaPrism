@@ -1,0 +1,741 @@
+---
+title: "data_HuukiMyers"
+format: html
+editor: visual
+---
+
+# 0. Environment Set-Up
+
+Packages
+```{r}
+#| label: libraries
+#| output: false
+#| warning: false
+library(SingleCellExperiment)
+library(ggplot2)
+library(httr)
+library(data.table)
+
+```
+
+```{r}
+#| label: global_variables
+data_dir <- "../data/"
+dir.exists(data_dir)
+
+source("../R/Omega_tensor.R")
+
+RECOMPUTE_PREPROCESSING <- FALSE
+
+ntfy_topic <- "A01422880"
+```
+
+
+# 1. Single-Cell Data Pre-Processing
+
+Loading full snRNA-seq dataset
+```{r}
+#| label: load_full_sce
+#| eval: !expr RECOMPUTE_PREPROCESSING
+#| output: false
+#| warning: false
+
+if (RECOMPUTE_PREPROCESSING) {
+  # Checking if Huuki-Myers data directory exists
+  if(!dir.exists(paste0(data_dir, "Data_Huuki-Myers2025_Brain/"))){
+    sce_path_zip <- DeconvoBuddies::fetch_deconvo_data("sce")
+    unzip(sce_path_zip, exdir = paste0(data_dir, "Data_Huuki-Myers2025_Brain/"))
+    rm(sce_path_zip)
+  }
+  
+  # Loading SingleCellExperiment object
+  sce <- HDF5Array::loadHDF5SummarizedExperiment(file.path(paste0(data_dir, "Data_Huuki-Myers2025_Brain/"), "sce_DLPFC_annotated"))
+}
+```
+
+Getting lists of all cell types and cell states and removing cells tagges as "Ambiguous".
+```{r}
+#| label: pp_cell_lists
+#| eval: !expr RECOMPUTE_PREPROCESSING
+
+if (RECOMPUTE_PREPROCESSING) {
+  # Fetching cell types
+  all_types <- names(table(sce$cellType_broad_hc))
+  
+  # Removing ambiguous cell type
+  all_types <- all_types[!all_types %in% c("Ambiguous")]
+  sce <- sce[, sce$cellType_broad_hc %in% all_types]
+  
+  # Fetching cell states
+  all_states <- unique(as.vector(sce$cellType_hc))
+}
+```
+
+Graphing correlation across cell states
+```{r}
+#| label: fig-state_correlations
+#| eval: !expr RECOMPUTE_PREPROCESSING
+#| fig-cap: "Heatmap of expression correlation across cell states."
+#| cache: true
+
+if (RECOMPUTE_PREPROCESSING) {
+BayesPrism::plot.cor.phi (input=t(counts(sce)),
+                input.labels=sce$cellType_hc,
+                title="cell state correlation",
+                #specify pdf.prefix if need to output to pdf
+                pdf.prefix="gbm.cor.cs", 
+                cexRow=0.2, cexCol=0.2,
+                margins=c(2,2))
+}
+```
+
+Graphing correlation across cell types
+```{r}
+#| label: fig-type_correlations
+#| eval: !expr RECOMPUTE_PREPROCESSING
+#| fig-cap: "Heatmap of expression correlation across cell types."
+#| cache: true
+if (RECOMPUTE_PREPROCESSING){
+  BayesPrism::plot.cor.phi (input=t(counts(sce)),
+                input.labels=sce$cellType_broad_hc, 
+                title="cell type correlation",
+                #specify pdf.prefix if need to output to pdf
+                #pdf.prefix="gbm.cor.ct",
+                cexRow=0.5, cexCol=0.5,
+                )
+}
+```
+
+Getting and plotting gene statistics
+```{r}
+#| label: fig-specificty
+#| eval: !expr RECOMPUTE_PREPROCESSING
+#| fig-cap: "Gene specificity plot. Ribosomal, mitochondrial and chrX  chrY genes have high abundance but low specificity. They may be excluded from the analysis."
+#| cache: true
+
+if (RECOMPUTE_PREPROCESSING) {
+  rownames(sce) <- make.unique(rownames(sce))
+  sc.stat <- BayesPrism::plot.scRNA.outlier(
+    input=t(assay(sce)), #make sure the colnames are gene symbol or ENSMEBL ID 
+    cell.type.labels=sce$cellType_broad_hc,
+    species="hs", #currently only human(hs) and mouse(mm) annotations are supported
+    return.raw=TRUE #return the data used for plotting. 
+    #pdf.prefix="gbm.sc.stat" specify pdf.prefix if need to output to pdf
+  )
+  rowData(sce) <- cbind(rowData(sce), sc.stat)
+  rm(sc.stat)
+}
+```
+
+Gene-level QC
+```{r}
+#| label: gene_qc
+#| eval: !expr RECOMPUTE_PREPROCESSING
+
+if (RECOMPUTE_PREPROCESSING) {
+  # Removing ribosomal, mitochondrial and chrX  chrY genes
+  sc.dat.filtered <- BayesPrism::cleanup.genes(input=t(assay(sce)),
+                                               input.type="count.matrix",
+                                               species="hs", 
+                                               gene.group=c( "Rb","Mrp","other_Rb","chrM","MALAT1","chrX","chrY") ,
+                                               exp.cells=5)
+  sce <- sce[colnames(sc.dat.filtered), ]
+  rm(sc.dat.filtered)
+  
+  # Limiting to protein coding genes
+  sc.dat.filtered.pc <-  BayesPrism::select.gene.type(t(assay(sce)),
+                                                      gene.type = "protein_coding")
+  sce <- sce[colnames(sc.dat.filtered.pc), ]
+  rm(sc.dat.filtered.pc)
+  
+  # Save the object
+  HDF5Array::saveHDF5SummarizedExperiment(
+    x = sce, 
+    dir = paste0(data_dir, "NotebookRData/data_HuukiMyers/pp_sce"), 
+    replace = TRUE,     # Overwrite if it already exists
+    chunkdim = NULL,    # Let the package decide optimal chunking
+    level = NULL        # Default compression level
+  )
+}
+```
+
+## 1.1 Loading Pre-Processed Single-Cell Data
+```{r}
+#| label: load_preprocessed
+#| eval: !expr "!RECOMPUTE_PREPROCESSING"
+sce <- HDF5Array::loadHDF5SummarizedExperiment(
+  dir = paste0(data_dir, "NotebookRData/data_HuukiMyers/pp_sce")
+)
+```
+
+```{r}
+#| label: cell_lists
+
+# Standardizing metadata for generalizability
+sce$deconv_type  <- sce$cellType_broad_hc
+sce$deconv_state <- sce$cellType_hc
+sce$ref_sample <- sce$Sample
+
+# Drop empty factors
+sce$deconv_state <- droplevels(sce$deconv_state)
+sce$deconv_type <- droplevels(sce$deconv_type)
+
+# Get lists of all types and all states
+all_types <- unique(as.vector(sce$deconv_type))
+all_states <- unique(as.vector(sce$deconv_state))
+
+# Get type to state map
+type_to_state <- lapply(all_types,function(t)unique(as.vector(sce$deconv_state[sce$deconv_type==t])))
+names(type_to_state) <- all_types
+
+# Get state to type map
+state_to_type <- stack(type_to_state)
+colnames(state_to_type) <- c("cell_state", "cell_type")
+```
+
+Color dictionaries for graphs
+```{r}
+#| label: color_dicts
+type_colors <- c(
+  Inhib = "#369acc", 
+  Oligo = "#f8e16f", 
+  OPC = "#6c584c", 
+  Excit = "#95cf92", 
+  Astro = "#9656a2", 
+  EndoMural = "#f4895f", 
+  Micro = "#de324c"
+)
+
+#type_colors <- setNames(brewer.pal(length(type_to_state), "Set3"), names(type_to_state))
+
+state_colors <- unlist(lapply(names(type_to_state), function(ct) {
+  states <- sort(type_to_state[[ct]])
+  n <- length(states)
+  base <- type_colors[ct]
+  
+  if (n == 1) return(setNames(base, states))
+  
+  pal_func <- colorRampPalette(c(
+    colorspace::lighten(base, 0.4),
+    base, 
+    colorspace::darken(base, 0.4)
+  ))
+  
+  # 3. Assign the gradient to the sorted names
+  # This ensures Excit_01 gets the lightest and Excit_15 gets the darkest
+  return(setNames(pal_func(n), states))
+}))
+
+#scales::show_col(type_colors)
+#scales::show_col(state_colors)
+```
+
+# 2. Bulk Data
+```{r}
+#| label: blk_load
+#| output: false
+#| warning: false
+blk <- DeconvoBuddies::fetch_deconvo_data("rse_gene")
+
+# Ensure Gene Symbols are used as the rownames in bulk dataset
+rownames(blk) <- rowData(blk)$Symbol
+blk$ref_sample <- blk$Sample
+blk$blk_sample <- blk$SAMPLE_ID
+```
+
+# 3. Dataset-Specific Objects
+```{r}
+#| label: functions
+source("../R/Omega_tensor.R")
+```
+
+## 3.1 Counts Per State and Sample
+```{r}
+#| label: get_state_sample_counts
+
+if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "state_sample_counts.rds"))){
+  state_sample_counts <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "state_sample_counts.rds"))
+} else {
+  # Uses httr
+  tryCatch({
+    # Gets state_sample_counts list
+    state_sample_counts <- aggregate_stratified_counts(t(assay(sce, "counts")), sce$ref_sample, sce$deconv_state, include_pseudobulk = TRUE)
+    
+    # Stores state_sample_counts
+    saveRDS(state_sample_counts, file=paste0(data_dir, "NotebookRData/data_HuukiMyers/", "state_sample_counts.rds"))
+    
+    # Uses nfty to notify process completion
+    httr::POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = "Saved state_sample_counts successfully ✅",
+         add_headers(Title = "✅ R Process Success")
+         )
+  }, error = function(e) {
+    # Uses nfty to notify process error
+    POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = paste0("Getting state_sample_counts failed: ", e$message),
+         add_headers(Title = "❌ R Process ERROR", Priotity = "high")
+         )
+  })
+}
+```
+
+```{r}
+gt_s_counts <- array(NA, dim = c(length(unique(state_sample_counts$meta$Sample)), 
+                                   length(unique(rownames(state_sample_counts$pseudoexp))),
+                                   length(unique(state_sample_counts$meta$Label))),
+                       dimnames = list(unique(state_sample_counts$meta$Sample),
+                                       unique(rownames(state_sample_counts$pseudoexp)),
+                                       unique(state_sample_counts$meta$Label)))
+
+for (col_name in colnames(state_sample_counts$pseudoexp)) {
+  parts <- unlist(strsplit(col_name, ":::"))
+  n <- parts[1]
+  cs <- parts[2]
+  
+  gt_s_counts[n, , cs] <- state_sample_counts$pseudoexp[, col_name]
+}
+
+gt_s_logCP10k <- apply(gt_s_counts, c(1,3), function(x) log1p((x / sum(x)) * 1e4))
+```
+
+
+```{r}
+#| label: get_type_sample_counts
+
+if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "type_sample_counts.rds"))){
+  type_sample_counts <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "type_sample_counts.rds"))
+} else {
+  tryCatch({
+    type_sample_counts <- aggregate_stratified_counts(t(assay(sce, "counts")), sce$ref_sample, sce$cellType_broad_hc, include_pseudobulk = TRUE)
+    saveRDS(type_sample_counts, file=paste0(data_dir, "NotebookRData/data_HuukiMyers/", "type_sample_counts.rds"))
+    POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = "Saved type_sample_counts successfully ✅",
+         add_headers(Title = "✅ R Process Success")
+         )
+  }, error = function(e) {
+    POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = paste0("Getting type_sample_counts failed: ", e$message),
+         add_headers(Title = "❌ R Process ERROR", Priotity = "high")
+         )
+  })
+}
+```
+
+```{r}
+#| label: ground_truth_type
+gt_t_counts <- array(NA, dim = c(length(unique(type_sample_counts$meta$Sample)), 
+                                   length(unique(rownames(type_sample_counts$pseudoexp))),
+                                   length(unique(type_sample_counts$meta$Label))),
+                       dimnames = list(unique(type_sample_counts$meta$Sample),
+                                       unique(rownames(type_sample_counts$pseudoexp)),
+                                       unique(type_sample_counts$meta$Label)))
+
+for (col_name in colnames(type_sample_counts$pseudoexp)) {
+  # Parse the sample and state for the current column
+  parts <- unlist(strsplit(col_name, ":::"))
+  n <- parts[1]
+  ct <- parts[2]
+  
+  # Fill the slice: tensor[sample, all genes, cell state]
+  gt_t_counts[n, , ct] <- type_sample_counts$pseudoexp[, col_name]
+}
+
+gt_t_logCP10k <- apply(gt_t_counts, c(1,3), function(x) log1p((x / sum(x)) * 1e4))
+```
+
+## 3.2 BayesPrism Results
+### 3.2.1 New Prism
+
+```{r}
+#| label: new_prism
+
+if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "myPrism.rds"))){
+  myPrism <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "myPrism.rds"))
+} else {
+  tryCatch({
+    # Gets prism object
+    myPrism <- BayesPrism::new.prism(
+      reference=t(as.matrix(counts(sce))), 
+      mixture=t(assay(blk)),
+      input.type="count.matrix", 
+      cell.type.labels = sce$deconv_type, 
+      cell.state.labels = sce$deconv_state,
+      key = NULL,
+      outlier.cut=0.01,
+      outlier.fraction=0.1,
+      )
+    
+    # Stores prism object
+    saveRDS(myPrism, file=paste0(data_dir, "NotebookRData/data_HuukiMyers/", "myPrism.rds"))
+    
+    # Uses nfty to notify process completion
+    httr::POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = "Saved myPrism successfully ✅",
+         add_headers(Title = "✅ R Process Success")
+         )
+  }, error = function(e) {
+    # Uses nfty to notify process error
+    POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = paste0("Getting myPrism failed: ", e$message),
+         add_headers(Title = "❌ R Process ERROR", Priotity = "high")
+         )
+  })
+}
+
+```
+
+### 3.2.2 Run BayesPrism
+
+```{r}
+#| label: bayesprism
+
+if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "bp_blk.rds"))){
+  bp_blk <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "bp_blk.rds"))
+} else {
+  tryCatch({
+    # Run BayesPrism on sce
+    bp_blk <- BayesPrism::run.prism(prism = myPrism, n.cores=10)
+    
+    # Stores BayesPrism results
+    saveRDS(bp_blk, file=paste0(data_dir, "NotebookRData/data_HuukiMyers/", "bp_blk.rds"))
+    
+    # Uses nfty to notify process completion
+    httr::POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = "Ran BayesPrim successfully ✅",
+         add_headers(Title = "✅ R Process Success")
+         )
+  }, error = function(e) {
+    # Uses nfty to notify process error
+    POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = paste0("Running BayesPrism failed: ", e$message),
+         add_headers(Title = "❌ R Process ERROR", Priotity = "high")
+         )
+  })
+}
+
+```
+
+## 3.3 Correlations
+
+```{r}
+#| eval: false
+
+build_C_slg <- function(tCorr, rho_threshold = 0,
+                         ligand_filter = NULL, gene_filter = NULL) {
+  
+  # Determine dimensions — pre-filter to relevant ligands/genes if provided
+  # to keep the tensor as small as possible
+  all_receivers <- unique(tCorr$Receiver)
+  all_ligands   <- unique(tCorr$Ligand)
+  all_genes     <- unique(tCorr$Gene)
+  
+  if (!is.null(ligand_filter)) all_ligands <- intersect(all_ligands, ligand_filter)
+  if (!is.null(gene_filter))   all_genes   <- intersect(all_genes,   gene_filter)
+  
+  message(sprintf("Allocating C_slg: %d receivers x %d ligands x %d genes (%.1f MB)",
+                  length(all_receivers), length(all_ligands), length(all_genes),
+                  length(all_receivers) * length(all_ligands) * length(all_genes) * 8 / 1e6))
+  
+  # Pre-allocate tensor [Receiver x Ligand x Gene]
+  C_slg <- array(0,
+                 dim = c(length(all_receivers), length(all_ligands), length(all_genes)),
+                 dimnames = list(Receiver = all_receivers,
+                                 Ligand   = all_ligands,
+                                 Gene     = all_genes))
+  
+  # Process one receiver at a time to avoid copying full tCorr
+  for (rec in all_receivers) {
+    message(sprintf("Processing %s...", rec))
+    
+    rec_dt <- tCorr[Receiver == rec & 
+                    !is.na(Rho)          & 
+                    abs(Rho) >= rho_threshold &
+                    Ligand %in% all_ligands   &
+                    Gene   %in% all_genes]
+    
+    if (nrow(rec_dt) == 0) {
+      message(sprintf("  No correlations above threshold for %s, skipping.", rec))
+      next
+    }
+    
+    # Cast to [Ligand x Gene] matrix using raw Rho
+    rec_wide <- dcast(rec_dt, Ligand ~ Gene, value.var = "Rho", fill = 0)
+    
+    ligs <- rec_wide$Ligand
+    m    <- as.matrix(rec_wide[, !"Ligand"])
+    rownames(m) <- ligs
+    
+    # Fill tensor slice
+    common_ligs  <- intersect(all_ligands, rownames(m))
+    common_genes <- intersect(all_genes,   colnames(m))
+    
+    C_slg[rec, common_ligs, common_genes] <- m[common_ligs, common_genes]
+    
+    rm(rec_dt, rec_wide, m, ligs)
+    gc()
+  }
+  
+  return(C_slg)
+}
+```
+
+### 3.3.1 State-Level
+
+```{r}
+#| label: state_corrs
+#| eval: false
+
+if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tCorr_s.rds"))){
+  tCorr_s <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tCorr_s.rds"))
+} else {
+  tryCatch({
+    tCorr_s <- get_trans_correlations_parallel(expr_mat = state_sample_counts$logexpr, 
+                                             meta = state_sample_counts$meta, 
+                                             lig_genes = lig_genes, 
+                                             tar_genes = tar_genes, 
+                                             n_cores = 8, 
+                                             rho_threshold = 0)
+    saveRDS(tCorr_s, file=paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tCorr_s.rds"))
+    POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = "Saved corr_s successfully",
+         add_headers(Title = "✅ R Process Success")
+         )
+  }, error = function(e) {
+    POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = paste0("Getting corr_s failed: ", e$message),
+         add_headers(Title = "❌ R Process ERROR", Priotity = "high")
+         )
+  })
+}
+
+```
+
+```{r}
+#| label: C_slg
+#| eval: false
+
+if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "C_slg.rds"))){
+  C_slg <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "C_slg.rds"))
+} else {
+  tryCatch({
+    C_slg <- get_trans_correlations_parallel(expr_mat = state_sample_counts$logexpr, 
+                                             meta = state_sample_counts$meta, 
+                                             lig_genes = lig_genes, 
+                                             tar_genes = tar_genes, 
+                                             n_cores = 8, 
+                                             rho_threshold = 0)
+    saveRDS(C_slg, file=paste0(data_dir, "NotebookRData/data_HuukiMyers/", "C_slg.rds"))
+    POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = "Saved C_slg successfully",
+         add_headers(Title = "✅ R Process Success")
+         )
+  }, error = function(e) {
+    POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = paste0("Getting C_slg failed: ", e$message),
+         add_headers(Title = "❌ R Process ERROR", Priotity = "high")
+         )
+  })
+}
+
+```
+
+```{r}
+#| label: state_consensus
+
+if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tConsensus_s.rds"))){
+  tConsensus_s <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tConsensus_s.rds"))
+} else {
+  tryCatch({
+    tConsensus_s <- compute_stouffer_consensus(tCorr_s)
+    saveRDS(tConsensus_s, file = paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tConsensus_s.rds"))
+    POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = "Saved tConsensus_s successfully",
+         add_headers(Title = "✅ R Process Success")
+         )
+  }, error = function(e) {
+    POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = paste0("Getting tConsensus_s  failed: ", e$message),
+         add_headers(Title = "❌ R Process ERROR", Priotity = "high")
+         )
+  })
+}
+
+```
+
+```{r}
+#| label: state_C_lg
+norm_factor <- quantile(abs(tConsensus_s$StoufferZ), 0.95, na.rm = TRUE)
+tConsensus_s[, Z_norm := StoufferZ / norm_factor]
+
+tConsensus_s$Z_filtered <- tConsensus_s$Z_norm
+tConsensus_s[Consistency < 0.85, Z_filtered := 0]
+
+C_s_tmp <- dcast(tConsensus_s, Ligand ~ Gene, value.var = "Z_filtered", fill = 0)
+
+C_s_mtx <- as.matrix(C_s_tmp[, -1])
+rownames(C_s_mtx) <- C_s_tmp$Ligand
+
+rm(C_s_tmp)
+```
+
+### 3.3.1 Type-Level
+
+```{r}
+#| label: type_corrs
+#| eval: false
+
+if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tCorr_t.rds"))){
+  tCorr_t <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tCorr_t.rds"))
+} else {
+  tryCatch({
+    tCorr_t <- get_trans_correlations_parallel(expr_mat = type_sample_counts$logexpr, 
+                                             meta = type_sample_counts$meta, 
+                                             lig_genes = lig_genes, 
+                                             tar_genes = tar_genes, 
+                                             n_cores = 8, 
+                                             rho_threshold = 0)
+    saveRDS(tCorr_t, file=paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tCorr_t.rds"))
+    POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = "Saved tCorr_t successfully",
+         add_headers(Title = "✅ R Process Success")
+         )
+  }, error = function(e) {
+    POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = paste0("Getting tCorr_t failed: ", e$message),
+         add_headers(Title = "❌ R Process ERROR", Priotity = "high")
+         )
+  })
+}
+
+```
+
+```{r}
+#| label: C_tlg
+#| eval: false
+
+if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "C_tlg.rds"))){
+  C_tlg <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "C_tlg.rds"))
+} else {
+  C_tlg <- build_C_slg(tCorr_t,
+                        rho_threshold  = 0)
+  
+  saveRDS(C_tlg, file = paste0(data_dir, "NotebookRData/data_HuukiMyers/", "C_tlg.rds"))
+}
+
+```
+
+```{r}
+#| label: type_consensus
+
+if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tConsensus_t.rds"))){
+  tConsensus_t <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tConsensus_t.rds"))
+} else {
+  tryCatch({
+    tConsensus_t <- compute_stouffer_consensus(tCorr_t)
+    saveRDS(tConsensus_t, file = paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tConsensus_t.rds"))
+    POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = "Saved tConsensus_t successfully",
+         add_headers(Title = "✅ R Process Success")
+         )
+  }, error = function(e) {
+    POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = paste0("Getting tConsensus_t  failed: ", e$message),
+         add_headers(Title = "❌ R Process ERROR", Priotity = "high")
+         )
+  })
+}
+
+```
+
+```{r}
+#| label: type_C_lg
+norm_factor <- quantile(abs(tConsensus_t$StoufferZ), 0.95, na.rm = TRUE)
+tConsensus_t[, Z_norm := StoufferZ / norm_factor]
+
+tConsensus_t$Z_filtered <- tConsensus_t$Z_norm
+tConsensus_t[Consistency < 0.85, Z_filtered := 0]
+
+C_t_tmp <- dcast(tConsensus_t, Ligand ~ Gene, value.var = "Z_filtered", fill = 0)
+
+C_t_mtx <- as.matrix(C_t_tmp[, -1])
+rownames(C_t_mtx) <- C_t_tmp$Ligand
+
+rm(C_t_tmp)
+```
+
+
+# 4. Pseudobulk
+
+```{r}
+psb_counts <- apply(gt_s_counts, c(1,2), sum, na.rm = TRUE)
+```
+
+```{r}
+#| label: new_prism
+
+if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "psbPrism.rds"))){
+  psbPrism <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "psbPrism.rds"))
+} else {
+  tryCatch({
+    # Gets prism object
+    psbPrism <- BayesPrism::new.prism(
+      reference=t(as.matrix(counts(sce))), 
+      mixture=psb_counts,
+      input.type="count.matrix", 
+      cell.type.labels = sce$deconv_type, 
+      cell.state.labels = sce$deconv_state,
+      key = NULL,
+      outlier.cut=0.01,
+      outlier.fraction=0.1,
+      )
+    
+    # Stores prism object
+    saveRDS(psbPrism, file=paste0(data_dir, "NotebookRData/data_HuukiMyers/", "psbPrism.rds"))
+    
+    # Uses nfty to notify process completion
+    httr::POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = "Saved psbPrism successfully ✅",
+         add_headers(Title = "✅ R Process Success")
+         )
+  }, error = function(e) {
+    # Uses nfty to notify process error
+    POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = paste0("Getting psbPrism failed: ", e$message),
+         add_headers(Title = "❌ R Process ERROR", Priotity = "high")
+         )
+  })
+}
+
+```
+
+```{r}
+#| label: pseudobulk_BayesPrism
+#| 
+if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "bp_psb.rds"))){
+  bp_psb <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "bp_psb.rds"))
+} else {
+  tryCatch({
+    # Run BayesPrism on sce
+    bp_psb <- BayesPrism::run.prism(prism = psbPrism, n.cores=10)
+    
+    # Stores BayesPrism results
+    saveRDS(bp_psb, file=paste0(data_dir, "NotebookRData/data_HuukiMyers/", "bp_psb.rds"))
+    
+    # Uses nfty to notify process completion
+    httr::POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = "Ran BayesPrim successfully ✅",
+         add_headers(Title = "✅ R Process Success")
+         )
+  }, error = function(e) {
+    # Uses nfty to notify process error
+    POST(paste0("https://ntfy.sh/", ntfy_topic),
+         body = paste0("Running BayesPrism failed: ", e$message),
+         add_headers(Title = "❌ R Process ERROR", Priotity = "high")
+         )
+  })
+}
+
+```
+
+
+
