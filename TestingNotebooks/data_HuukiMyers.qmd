@@ -16,14 +16,14 @@ library(ggplot2)
 library(httr)
 library(data.table)
 
+library(here)
+
 ```
 
 ```{r}
 #| label: global_variables
-data_dir <- "../data/"
-dir.exists(data_dir)
 
-source("../R/Omega_tensor.R")
+source(here("R", "Omega_tensor.R"))
 
 RECOMPUTE_PREPROCESSING <- FALSE
 
@@ -42,14 +42,14 @@ Loading full snRNA-seq dataset
 
 if (RECOMPUTE_PREPROCESSING) {
   # Checking if Huuki-Myers data directory exists
-  if(!dir.exists(paste0(data_dir, "Data_Huuki-Myers2025_Brain/"))){
+  if(!dir.exists(here("data/Data_Huuki-Myers2025_Brain/"))){
     sce_path_zip <- DeconvoBuddies::fetch_deconvo_data("sce")
-    unzip(sce_path_zip, exdir = paste0(data_dir, "Data_Huuki-Myers2025_Brain/"))
+    unzip(sce_path_zip, exdir = here("data/Data_Huuki-Myers2025_Brain/"))
     rm(sce_path_zip)
   }
   
   # Loading SingleCellExperiment object
-  sce <- HDF5Array::loadHDF5SummarizedExperiment(file.path(paste0(data_dir, "Data_Huuki-Myers2025_Brain/"), "sce_DLPFC_annotated"))
+  sce <- HDF5Array::loadHDF5SummarizedExperiment(file.path(here("data/Data_Huuki-Myers2025_Brain/"), "sce_DLPFC_annotated"))
 }
 ```
 
@@ -151,7 +151,7 @@ if (RECOMPUTE_PREPROCESSING) {
   # Save the object
   HDF5Array::saveHDF5SummarizedExperiment(
     x = sce, 
-    dir = paste0(data_dir, "NotebookRData/data_HuukiMyers/pp_sce"), 
+    dir = here("data/NotebookRData/data_HuukiMyers/pp_sce"), 
     replace = TRUE,     # Overwrite if it already exists
     chunkdim = NULL,    # Let the package decide optimal chunking
     level = NULL        # Default compression level
@@ -164,7 +164,7 @@ if (RECOMPUTE_PREPROCESSING) {
 #| label: load_preprocessed
 #| eval: !expr "!RECOMPUTE_PREPROCESSING"
 sce <- HDF5Array::loadHDF5SummarizedExperiment(
-  dir = paste0(data_dir, "NotebookRData/data_HuukiMyers/pp_sce")
+  dir = here("data/NotebookRData/data_HuukiMyers/pp_sce")
 )
 ```
 
@@ -257,17 +257,13 @@ mix_data_tag <- "blkHM"
 
 
 # 3. Dataset-Specific Objects
-```{r}
-#| label: functions
-source("../R/Omega_tensor.R")
-```
 
 ## 3.1 Counts Per State and Sample
 ```{r}
 #| label: get_state_sample_counts
 
-if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "state_sample_counts.rds"))){
-  state_sample_counts <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "state_sample_counts.rds"))
+if (file.exists(here("data/NotebookRData/data_HuukiMyers/", "state_sample_counts.rds"))){
+  state_sample_counts <- readRDS(here("data/NotebookRData/data_HuukiMyers/", "state_sample_counts.rds"))
 } else {
   # Uses httr
   tryCatch({
@@ -275,7 +271,7 @@ if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "state_sample
     state_sample_counts <- aggregate_stratified_counts(t(assay(sce, "counts")), sce$ref_sample, sce$deconv_state, include_pseudobulk = TRUE)
     
     # Stores state_sample_counts
-    saveRDS(state_sample_counts, file=paste0(data_dir, "NotebookRData/data_HuukiMyers/", "state_sample_counts.rds"))
+    saveRDS(state_sample_counts, file=here("data/NotebookRData/data_HuukiMyers/", "state_sample_counts.rds"))
     
     # Uses nfty to notify process completion
     httr::POST(paste0("https://ntfy.sh/", ntfy_topic),
@@ -315,12 +311,12 @@ gt_s_logCP10k <- apply(gt_s_counts, c(1,3), function(x) log1p((x / sum(x)) * 1e4
 ```{r}
 #| label: get_type_sample_counts
 
-if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "type_sample_counts.rds"))){
-  type_sample_counts <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "type_sample_counts.rds"))
+if (file.exists(here("data/NotebookRData/data_HuukiMyers/", "type_sample_counts.rds"))){
+  type_sample_counts <- readRDS(here("data/NotebookRData/data_HuukiMyers/", "type_sample_counts.rds"))
 } else {
   tryCatch({
     type_sample_counts <- aggregate_stratified_counts(t(assay(sce, "counts")), sce$ref_sample, sce$cellType_broad_hc, include_pseudobulk = TRUE)
-    saveRDS(type_sample_counts, file=paste0(data_dir, "NotebookRData/data_HuukiMyers/", "type_sample_counts.rds"))
+    saveRDS(type_sample_counts, file=here("data/NotebookRData/data_HuukiMyers/", "type_sample_counts.rds"))
     POST(paste0("https://ntfy.sh/", ntfy_topic),
          body = "Saved type_sample_counts successfully ✅",
          add_headers(Title = "✅ R Process Success")
@@ -362,8 +358,8 @@ gt_t_logCP10k <- apply(gt_t_counts, c(1,3), function(x) log1p((x / sum(x)) * 1e4
 ```{r}
 #| label: new_prism
 
-if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "myPrism.rds"))){
-  myPrism <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "myPrism.rds"))
+if (file.exists(here("data/NotebookRData/data_HuukiMyers/", "myPrism.rds"))){
+  myPrism <- readRDS(here("data/NotebookRData/data_HuukiMyers/", "myPrism.rds"))
 } else {
   tryCatch({
     # Gets prism object
@@ -379,7 +375,7 @@ if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "myPrism.rds"
       )
     
     # Stores prism object
-    saveRDS(myPrism, file=paste0(data_dir, "NotebookRData/data_HuukiMyers/", "myPrism.rds"))
+    saveRDS(myPrism, file=here("data/NotebookRData/data_HuukiMyers/", "myPrism.rds"))
     
     # Uses nfty to notify process completion
     httr::POST(paste0("https://ntfy.sh/", ntfy_topic),
@@ -402,15 +398,15 @@ if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "myPrism.rds"
 ```{r}
 #| label: bayesprism
 
-if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "bp_blk.rds"))){
-  bp_blk <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "bp_blk.rds"))
+if (file.exists(here("data/NotebookRData/data_HuukiMyers/", "bp_blk.rds"))){
+  bp_blk <- readRDS(here("data/NotebookRData/data_HuukiMyers/", "bp_blk.rds"))
 } else {
   tryCatch({
     # Run BayesPrism on sce
     bp_blk <- BayesPrism::run.prism(prism = myPrism, n.cores=10)
     
     # Stores BayesPrism results
-    saveRDS(bp_blk, file=paste0(data_dir, "NotebookRData/data_HuukiMyers/", "bp_blk.rds"))
+    saveRDS(bp_blk, file=here("data/NotebookRData/data_HuukiMyers/", "bp_blk.rds"))
     
     # Uses nfty to notify process completion
     httr::POST(paste0("https://ntfy.sh/", ntfy_topic),
@@ -498,8 +494,8 @@ build_C_slg <- function(tCorr, rho_threshold = 0,
 #| label: state_corrs
 #| eval: false
 
-if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tCorr_s.rds"))){
-  tCorr_s <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tCorr_s.rds"))
+if (file.exists(here("data/NotebookRData/data_HuukiMyers/", "tCorr_s.rds"))){
+  tCorr_s <- readRDS(here("data/NotebookRData/data_HuukiMyers/", "tCorr_s.rds"))
 } else {
   tryCatch({
     tCorr_s <- get_trans_correlations_parallel(expr_mat = state_sample_counts$logexpr, 
@@ -508,7 +504,7 @@ if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tCorr_s.rds"
                                              tar_genes = tar_genes, 
                                              n_cores = 8, 
                                              rho_threshold = 0)
-    saveRDS(tCorr_s, file=paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tCorr_s.rds"))
+    saveRDS(tCorr_s, file=here("data/NotebookRData/data_HuukiMyers/", "tCorr_s.rds"))
     POST(paste0("https://ntfy.sh/", ntfy_topic),
          body = "Saved corr_s successfully",
          add_headers(Title = "✅ R Process Success")
@@ -527,8 +523,8 @@ if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tCorr_s.rds"
 #| label: C_slg
 #| eval: false
 
-if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "C_slg.rds"))){
-  C_slg <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "C_slg.rds"))
+if (file.exists(here("data/NotebookRData/data_HuukiMyers/", "C_slg.rds"))){
+  C_slg <- readRDS(here("data/NotebookRData/data_HuukiMyers/", "C_slg.rds"))
 } else {
   tryCatch({
     C_slg <- get_trans_correlations_parallel(expr_mat = state_sample_counts$logexpr, 
@@ -537,7 +533,7 @@ if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "C_slg.rds"))
                                              tar_genes = tar_genes, 
                                              n_cores = 8, 
                                              rho_threshold = 0)
-    saveRDS(C_slg, file=paste0(data_dir, "NotebookRData/data_HuukiMyers/", "C_slg.rds"))
+    saveRDS(C_slg, file=here("data/NotebookRData/data_HuukiMyers/", "C_slg.rds"))
     POST(paste0("https://ntfy.sh/", ntfy_topic),
          body = "Saved C_slg successfully",
          add_headers(Title = "✅ R Process Success")
@@ -555,12 +551,12 @@ if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "C_slg.rds"))
 ```{r}
 #| label: state_consensus
 
-if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tConsensus_s.rds"))){
-  tConsensus_s <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tConsensus_s.rds"))
+if (file.exists(here("data/NotebookRData/data_HuukiMyers/", "tConsensus_s.rds"))){
+  tConsensus_s <- readRDS(here("data/NotebookRData/data_HuukiMyers/", "tConsensus_s.rds"))
 } else {
   tryCatch({
     tConsensus_s <- compute_stouffer_consensus(tCorr_s)
-    saveRDS(tConsensus_s, file = paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tConsensus_s.rds"))
+    saveRDS(tConsensus_s, file = here("data/NotebookRData/data_HuukiMyers/", "tConsensus_s.rds"))
     POST(paste0("https://ntfy.sh/", ntfy_topic),
          body = "Saved tConsensus_s successfully",
          add_headers(Title = "✅ R Process Success")
@@ -597,8 +593,8 @@ rm(C_s_tmp)
 #| label: type_corrs
 #| eval: false
 
-if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tCorr_t.rds"))){
-  tCorr_t <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tCorr_t.rds"))
+if (file.exists(here("data/NotebookRData/data_HuukiMyers/", "tCorr_t.rds"))){
+  tCorr_t <- readRDS(here("data/NotebookRData/data_HuukiMyers/", "tCorr_t.rds"))
 } else {
   tryCatch({
     tCorr_t <- get_trans_correlations_parallel(expr_mat = type_sample_counts$logexpr, 
@@ -607,7 +603,7 @@ if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tCorr_t.rds"
                                              tar_genes = tar_genes, 
                                              n_cores = 8, 
                                              rho_threshold = 0)
-    saveRDS(tCorr_t, file=paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tCorr_t.rds"))
+    saveRDS(tCorr_t, file=here("data/NotebookRData/data_HuukiMyers/", "tCorr_t.rds"))
     POST(paste0("https://ntfy.sh/", ntfy_topic),
          body = "Saved tCorr_t successfully",
          add_headers(Title = "✅ R Process Success")
@@ -626,13 +622,13 @@ if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tCorr_t.rds"
 #| label: C_tlg
 #| eval: false
 
-if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "C_tlg.rds"))){
-  C_tlg <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "C_tlg.rds"))
+if (file.exists(here("data/NotebookRData/data_HuukiMyers/", "C_tlg.rds"))){
+  C_tlg <- readRDS(here("data/NotebookRData/data_HuukiMyers/", "C_tlg.rds"))
 } else {
   C_tlg <- build_C_slg(tCorr_t,
                         rho_threshold  = 0)
   
-  saveRDS(C_tlg, file = paste0(data_dir, "NotebookRData/data_HuukiMyers/", "C_tlg.rds"))
+  saveRDS(C_tlg, file = here("data/NotebookRData/data_HuukiMyers/", "C_tlg.rds"))
 }
 
 ```
@@ -640,12 +636,12 @@ if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "C_tlg.rds"))
 ```{r}
 #| label: type_consensus
 
-if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tConsensus_t.rds"))){
-  tConsensus_t <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tConsensus_t.rds"))
+if (file.exists(here("data/NotebookRData/data_HuukiMyers/", "tConsensus_t.rds"))){
+  tConsensus_t <- readRDS(here("data/NotebookRData/data_HuukiMyers/", "tConsensus_t.rds"))
 } else {
   tryCatch({
     tConsensus_t <- compute_stouffer_consensus(tCorr_t)
-    saveRDS(tConsensus_t, file = paste0(data_dir, "NotebookRData/data_HuukiMyers/", "tConsensus_t.rds"))
+    saveRDS(tConsensus_t, file = here("data/NotebookRData/data_HuukiMyers/", "tConsensus_t.rds"))
     POST(paste0("https://ntfy.sh/", ntfy_topic),
          body = "Saved tConsensus_t successfully",
          add_headers(Title = "✅ R Process Success")
@@ -686,8 +682,8 @@ psb_counts <- apply(gt_s_counts, c(1,2), sum, na.rm = TRUE)
 ```{r}
 #| label: new_prism
 
-if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "psbPrism.rds"))){
-  psbPrism <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "psbPrism.rds"))
+if (file.exists(here("data/NotebookRData/data_HuukiMyers/", "psbPrism.rds"))){
+  psbPrism <- readRDS(here("data/NotebookRData/data_HuukiMyers/", "psbPrism.rds"))
 } else {
   tryCatch({
     # Gets prism object
@@ -703,7 +699,7 @@ if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "psbPrism.rds
       )
     
     # Stores prism object
-    saveRDS(psbPrism, file=paste0(data_dir, "NotebookRData/data_HuukiMyers/", "psbPrism.rds"))
+    saveRDS(psbPrism, file=here("data/NotebookRData/data_HuukiMyers/", "psbPrism.rds"))
     
     # Uses nfty to notify process completion
     httr::POST(paste0("https://ntfy.sh/", ntfy_topic),
@@ -724,15 +720,15 @@ if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "psbPrism.rds
 ```{r}
 #| label: pseudobulk_BayesPrism
 #| 
-if (file.exists(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "bp_psb.rds"))){
-  bp_psb <- readRDS(paste0(data_dir, "NotebookRData/data_HuukiMyers/", "bp_psb.rds"))
+if (file.exists(here("data/NotebookRData/data_HuukiMyers/", "bp_psb.rds"))){
+  bp_psb <- readRDS(here("data/NotebookRData/data_HuukiMyers/", "bp_psb.rds"))
 } else {
   tryCatch({
     # Run BayesPrism on sce
     bp_psb <- BayesPrism::run.prism(prism = psbPrism, n.cores=10)
     
     # Stores BayesPrism results
-    saveRDS(bp_psb, file=paste0(data_dir, "NotebookRData/data_HuukiMyers/", "bp_psb.rds"))
+    saveRDS(bp_psb, file=here("data/NotebookRData/data_HuukiMyers/", "bp_psb.rds"))
     
     # Uses nfty to notify process completion
     httr::POST(paste0("https://ntfy.sh/", ntfy_topic),

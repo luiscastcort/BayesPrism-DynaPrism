@@ -23,20 +23,20 @@ library(tidyverse)
 
 ```{r}
 #| label: bp-functions
-source("../BayesPrism/R/classes.R")
-source("../BayesPrism/R/new_prism.R")
-source("../BayesPrism/R/run_prism.R")
-source("../BayesPrism/R/run_gibbs.R")
-source("../BayesPrism/R/JointPost_functions.R")
-source("../BayesPrism/R/update_reference.R")
-source("../BayesPrism/R/optim_functions_MAP.R")
+source(here("BayesPrism/R/classes.R"))
+source(here("BayesPrism/R/new_prism.R"))
+source(here("BayesPrism/R/run_prism.R"))
+source(here("BayesPrism/R/run_gibbs.R"))
+source(here("BayesPrism/R/JointPost_functions.R"))
+source(here("BayesPrism/R/update_reference.R"))
+source(here("BayesPrism/R/optim_functions_MAP.R"))
 ```
 
 ```{r}
 #| label: dp-functions
 
-source("../R/Omega_tensor.R")
-source("../R/DynaPrism.R")
+source(here("R/Omega_tensor.R"))
+source(here("R/DynaPrism.R"))
 ```
 
 Requires dataset-specific variables `myPrism` and `C_t_mtx`. They may be obtained for each dataset running the corresponding quarto notebooks:
@@ -49,8 +49,8 @@ Requires dataset-specific variables `myPrism` and `C_t_mtx`. They may be obtaine
 #| label: load_regulatory_potential
 
 # Ligand target matrix. Target genes in rows, ligands in columns.
-ligand_target_matrix <- readRDS(paste0(data_dir, "nichenetr.dat/ligand_target_matrix_nsga2r_final.rds"))
-lr_network <- readRDS(paste0(data_dir, "nichenetr.dat/lr_network_human_21122021.rds"))
+ligand_target_matrix <- readRDS(here("data/nichenetr.dat/ligand_target_matrix_nsga2r_final.rds"))
+lr_network <- readRDS(here("data/nichenetr.dat/lr_network_human_21122021.rds"))
 ```
 
 ```{r}
@@ -72,14 +72,14 @@ oc <- list(
     dp_res <- save.run.Omega(
       prism          = myPrism,
       omega.control  = oc,
-      beta           = 0.7,
+      beta           = 1.4,
       mixture.name   = mix_data_tag,
       reference.name = ref_data_tag,
       opt.control    = list(update.omega = TRUE, optimizer = "MAP"),
       #gibbs.control  = list(chain.length = 1000, burn.in = 500, thinning = 2, seed = 123),
-      n.cores        = 10,
+      n.cores        = 4,
       store.C.input  = "hash",     # or "hash" for beta sweeps; omit to default to "value"
-      cache.dir      = "../data/runs"
+      cache.dir      = here("data/runs")
       )
     run_id <- paste0("dp_", mix_data_tag, "_", ref_data_tag, "_", paste0(run.hashes(dp_res), collapse = ""), "_b", gsub("\\.", "p", format(dp_res@control_param$gibbs.control$beta, trim = TRUE, scientific = FALSE)))
   POST(paste0("https://ntfy.sh/", ntfy_topic),
