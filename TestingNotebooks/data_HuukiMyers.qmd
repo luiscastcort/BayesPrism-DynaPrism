@@ -230,6 +230,12 @@ state_colors <- unlist(lapply(names(type_to_state), function(ct) {
 #scales::show_col(state_colors)
 ```
 
+```{r}
+#| label: ref_data_tag
+ref_data_tag <- "HMHM"
+```
+
+
 # 2. Bulk Data
 ```{r}
 #| label: blk_load
@@ -242,6 +248,13 @@ rownames(blk) <- rowData(blk)$Symbol
 blk$ref_sample <- blk$Sample
 blk$blk_sample <- blk$SAMPLE_ID
 ```
+
+```{r}
+#| label: mix_data_tag
+
+mix_data_tag <- "blkHM"
+```
+
 
 # 3. Dataset-Specific Objects
 ```{r}
