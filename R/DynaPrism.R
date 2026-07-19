@@ -1,7 +1,5 @@
 # ==============================================================================
-# DynaPrism - core functions
-# ==============================================================================
-
+# DynaPrism - core functions  (architecture refactor)
 
 # ------------------------------------------------------------------------------
 # Small utilities
@@ -114,16 +112,49 @@ build_Omega_from_control <- function(phi, control) {
 # Hashing core
 # ------------------------------------------------------------------------------
 # Single source of truth for the opt/gibbs/omega triplet.  Assumes opt.control
-# and gibbs.control are already validated.  n.cores is excluded from opt and
-# gibbs; beta is excluded from gibbs (it rides the readable run-id suffix);
-# key and update.gibbs enter the opt hash.  omega.spec is the nested state/type
-# spec (or the tensor-fingerprint list for pre-built runs).
-.compute_hashes <- function(key, opt.control, gibbs.control, update.gibbs, omega.spec) {
-  gibbs_for_hash <- gibbs.control; gibbs_for_hash$n.cores <- NULL; gibbs_for_hash$beta <- NULL
-  opt_for_hash   <- opt.control;   opt_for_hash$n.cores   <- NULL
-  c(opt   = .digest4(list(key = key, opt.control = opt_for_hash, update.gibbs = update.gibbs)),
-    gibbs = .digest4(gibbs_for_hash),
-    omega = .digest4(omega.spec))
+# and gibbs.control are already validated.  Excluded from the hashes: n.cores
+# (opt & gibbs) and beta (gibbs -- it rides the readable run-id suffix).
+# key and update.gibbs enter the opt hash.
+#
+# update.omega does NOT enter the opt hash: it is a niche-pressure knob (does the
+# final pass carry Omega?), so it enters the OMEGA hash instead.  Consequences:
+# a base BayesPrism run and a DynaPrism run with update.omega = FALSE share the
+# opt hash (their reference update / final pass are identical), while dp runs
+# with update.omega TRUE vs FALSE differ on the omega hash.  It is gated by
+# update.gibbs (no final pass => update.omega is moot), and the type-level spec
+# enters the omega hash only when the type Omega is actually used.
+
+# Build the omega hash preimage from the (nested state/type, or tensor) spec and
+# the effective update.omega flag.  NULL spec (no niche, e.g. bp) -> NULL.
+.omega_preimage <- function(omega.spec, update.omega.eff) {
+  if (is.null(omega.spec)) return(NULL)
+  if (length(names(omega.spec)) && all(names(omega.spec) %in% c("state", "type"))) {
+    list(update.omega = update.omega.eff,
+         state        = omega.spec$state,
+         type         = if (update.omega.eff) omega.spec$type else NULL)
+  } else {                                   # pre-built tensor fingerprints
+    tensors <- omega.spec
+    if (!update.omega.eff) tensors$Omega_type <- NULL
+    list(update.omega = update.omega.eff, tensors = tensors)
+  }
+}
+
+# The strip set (n.cores, beta) is identical for both engines, so for a
+# gibbs-form control the sampling digest equals the pre-rename "gibbs" digest
+# byte-for-byte -- existing dp/bp run ids are unchanged. For an ip-form control
+# the different field set yields a distinct digest, which is the point.
+.compute_hashes <- function(key, opt.control, sampling.control, update.gibbs, omega.spec) {
+  update.omega.eff <- isTRUE(opt.control$update.omega) && isTRUE(update.gibbs)
+  
+  sampling_for_hash <- sampling.control
+  sampling_for_hash$n.cores <- NULL; sampling_for_hash$beta <- NULL
+  opt_for_hash   <- opt.control
+  opt_for_hash$n.cores      <- NULL
+  opt_for_hash$update.omega <- NULL          # niche knob -> omega hash, not opt
+  
+  c(opt      = .digest4(list(key = key, opt.control = opt_for_hash, update.gibbs = update.gibbs)),
+    sampling = .digest4(sampling_for_hash),
+    omega    = .digest4(.omega_preimage(omega.spec, update.omega.eff)))
 }
 
 
@@ -155,6 +186,41 @@ valid.opt.control.Omega <- function(control) {
   stopifnot(is.logical(update.omega), length(update.omega) == 1L)
   ctrl$update.omega <- update.omega
   ctrl
+}
+
+
+#' Validate an ip (fixed-point / InstaPrism-style) sampling.control.
+#' Fields: max.iter (iteration cap), n.cores, alpha (Dirichlet prior, kept),
+#' beta (niche strength), tol (|dtheta| convergence stop), relax
+#' (under-relaxation in (0, 1]).  There is no burn.in / thinning / seed: a
+#' deterministic fixed point has no chain to burn, thin or seed.
+valid.ip.control <- function(control) {
+  ctrl <- list(max.iter = 200, n.cores = 1, alpha = 1, beta = 0.4,
+               tol = 1e-5, relax = 1)
+  namc <- names(control)
+  if (!all(namc %in% names(ctrl)))
+    stop("unknown names in ip sampling.control: ",
+         paste(namc[!(namc %in% names(ctrl))], collapse = ", "),
+         "\n  (ip form accepts: ", paste(names(ctrl), collapse = ", "), ")")
+  ctrl[namc] <- control
+  if (ctrl$alpha < 0)                    stop("alpha must be non-negative")
+  if (ctrl$beta  < 0)                    stop("beta must be non-negative")
+  if (ctrl$tol   <= 0)                   stop("tol must be positive")
+  if (ctrl$relax <= 0 || ctrl$relax > 1) stop("relax must be in (0, 1]")
+  if (ctrl$max.iter < 1)                 stop("max.iter must be >= 1")
+  ctrl
+}
+
+
+#' Method-aware sampling.control validator.
+#' ip -> ip form (valid.ip.control); dp / bp -> Gibbs form
+#' (valid.gibbs.control.Omega).  This is the single entry point through which
+#' both engines' sampling controls are validated, so their hash segments diverge
+#' by construction (different field sets) while opt / omega stay engine-invariant.
+valid.sampling.control <- function(control, method) {
+  method <- match.arg(method, c("dp", "bp", "ip"))
+  if (identical(method, "ip")) valid.ip.control(control)
+  else                         valid.gibbs.control.Omega(control)
 }
 
 
@@ -190,7 +256,7 @@ setClass("gibbsSamplerOmega",
 #'
 #' @slot elbo_per_sample Named numeric vector (bulk sample -> ELBO).
 #'   Populated when compute.elbo = TRUE; numeric(0) otherwise.
-#' @slot control_param carries gibbs.control, opt.control, update.gibbs, method,
+#' @slot control_param carries sampling.control, opt.control, update.gibbs, method,
 #'   dataset names, store.C.input, and the omega.log fingerprint record.  The
 #'   hashes and run id are NOT stored; recompute them with run.hashes(obj) /
 #'   run.id(obj).  The Omega tensors are not stored either; rebuild them with
@@ -323,7 +389,7 @@ estimate.gibbs.time.Omega <- function(gibbsSampler.obj,
 .run_meta_Omega <- function(prism, beta, method,
                             mixture.name, reference.name,
                             omega.control, Omega, Omega_type,
-                            update.gibbs, opt.control, gibbs.control, n.cores,
+                            update.gibbs, opt.control, sampling.control, n.cores,
                             store.C.input = "value") {
   
   stopifnot(is.numeric(beta), length(beta) == 1L, beta >= 0)
@@ -332,12 +398,20 @@ estimate.gibbs.time.Omega <- function(gibbsSampler.obj,
   method        <- match.arg(method, c("dp", "bp", "ip"))
   store.C.input <- match.arg(store.C.input, c("value", "hash"))
   
-  if (!"n.cores" %in% names(gibbs.control)) gibbs.control$n.cores <- n.cores
-  if (!"n.cores" %in% names(opt.control))   opt.control$n.cores   <- n.cores
+  if (!"n.cores" %in% names(sampling.control)) sampling.control$n.cores <- n.cores
+  if (!"n.cores" %in% names(opt.control))      opt.control$n.cores      <- n.cores
   
-  opt.control   <- valid.opt.control.Omega(opt.control)
-  gibbs.control <- valid.gibbs.control.Omega(gibbs.control)
-  gibbs.control$beta <- beta                       # top-level beta is authoritative
+  # Validate against the (pre-demotion) method so an ip control is checked as ip
+  # form even when the label later demotes dp -> bp for a niche-free run.
+  opt.control      <- valid.opt.control.Omega(opt.control)
+  sampling.control <- valid.sampling.control(sampling.control, method)
+  sampling.control$beta <- beta                    # top-level beta is authoritative
+  
+  # Match base BayesPrism: bump alpha before hashing AND storing, so the two
+  # never disagree and the sampling hash lines up with a bp run on the same
+  # prism. Both control forms carry alpha, so this applies to ip runs too.
+  if (prism@phi_cellState@pseudo.min == 0)
+    sampling.control$alpha <- max(1, sampling.control$alpha)
   
   omega.control <- .normalize_omega_control(omega.control)
   
@@ -351,15 +425,15 @@ estimate.gibbs.time.Omega <- function(gibbsSampler.obj,
   omega.log  <- .omega_log_from_control(omega.control, Omega, Omega_type, store.C.input)
   omega.spec <- .omega_spec_from_log(omega.log)
   
-  hashes <- .compute_hashes(prism@key, opt.control, gibbs.control,
+  hashes <- .compute_hashes(prism@key, opt.control, sampling.control,
                             update.gibbs, omega.spec)
   run.id <- make_run_id(method, mixture.name, reference.name,
-                        hashes[["opt"]], hashes[["gibbs"]], hashes[["omega"]], beta)
+                        hashes[["opt"]], hashes[["sampling"]], hashes[["omega"]], beta)
   
-  list(method        = method,
-       opt.control   = opt.control,
-       gibbs.control = gibbs.control,
-       omega.control = omega.control,
+  list(method           = method,
+       opt.control      = opt.control,
+       sampling.control = sampling.control,
+       omega.control    = omega.control,
        update.gibbs  = update.gibbs,
        store.C.input = store.C.input,
        omega.log     = omega.log,
@@ -379,7 +453,7 @@ estimate.gibbs.time.Omega <- function(gibbsSampler.obj,
 #'   Nested form list(state = <args>, type = <args>) is supported; a flat list
 #'   is taken as the state set; $type defaults to $state.  May be NULL if a
 #'   pre-built `Omega` (and, when update.omega = TRUE, `Omega_type`) is supplied.
-#' @param beta niche-pressure strength; authoritative over gibbs.control$beta and
+#' @param beta niche-pressure strength; authoritative over sampling.control$beta and
 #'   used for the run-id suffix.  Applied to both passes.
 #' @param method run label for the filename: "dp" (niche-aware, default),
 #'   "bp" (auto when no Omega is active) or "ip".
@@ -404,26 +478,23 @@ run.prism.Omega <- function(prism,
                             Omega          = NULL,
                             Omega_type     = NULL,
                             n.cores        = 1,
-                            update.gibbs   = TRUE,
-                            compute.elbo   = FALSE,
-                            gibbs.control  = list(),
-                            opt.control    = list(),
-                            store.C.input  = c("value", "hash")) {
+                            update.gibbs     = TRUE,
+                            compute.elbo     = FALSE,
+                            sampling.control = list(),
+                            opt.control      = list(),
+                            store.C.input    = c("value", "hash")) {
   
   store.C.input <- match.arg(store.C.input)
   
-  meta          <- .run_meta_Omega(prism, beta, method, mixture.name, reference.name,
-                                   omega.control, Omega, Omega_type, update.gibbs,
-                                   opt.control, gibbs.control, n.cores, store.C.input)
-  method        <- meta$method
-  opt.control   <- meta$opt.control
-  gibbs.control <- meta$gibbs.control
-  omega.control <- meta$omega.control
+  meta             <- .run_meta_Omega(prism, beta, method, mixture.name, reference.name,
+                                      omega.control, Omega, Omega_type, update.gibbs,
+                                      opt.control, sampling.control, n.cores, store.C.input)
+  method           <- meta$method
+  opt.control      <- meta$opt.control
+  sampling.control <- meta$sampling.control
+  omega.control    <- meta$omega.control
   store.C.input <- meta$store.C.input
   omega.log     <- meta$omega.log
-  
-  if (prism@phi_cellState@pseudo.min == 0)
-    gibbs.control$alpha <- max(1, gibbs.control$alpha)
   
   # --- build tensors (unless pre-built ones were supplied) --------------------
   if (is.null(Omega) && !is.null(omega.control)) {
@@ -447,14 +518,14 @@ run.prism.Omega <- function(prism,
   on.exit(unlink(tmp.dir, recursive = TRUE), add = TRUE)
   
   make_control_param <- function() list(
-    gibbs.control = gibbs.control,
-    opt.control   = opt.control,
-    update.gibbs  = update.gibbs,
-    method        = method,
-    mixture.name  = mixture.name,
-    reference.name= reference.name,
-    store.C.input = store.C.input,
-    omega.log     = omega.log
+    sampling.control = sampling.control,
+    opt.control      = opt.control,
+    update.gibbs     = update.gibbs,
+    method           = method,
+    mixture.name     = mixture.name,
+    reference.name   = reference.name,
+    store.C.input    = store.C.input,
+    omega.log        = omega.log
   )
   
   # --- initial Gibbs: cell-state level, Omega-modulated -----------------------
@@ -462,7 +533,7 @@ run.prism.Omega <- function(prism,
                              reference     = prism@phi_cellState,
                              X             = prism@mixture,
                              Omega         = Omega,
-                             gibbs.control = gibbs.control)
+                             gibbs.control = sampling.control)
   
   ini_result       <- run.gibbs.Omega(gibbsSampler.ini.cs,
                                       final        = FALSE,
@@ -499,13 +570,13 @@ run.prism.Omega <- function(prism,
                                reference     = psi,
                                X             = prism@mixture,
                                Omega         = Omega_type,
-                               gibbs.control = gibbs.control)
+                               gibbs.control = sampling.control)
     theta_f <- run.gibbs.Omega(gibbsSampler.update, final = TRUE, compute.elbo = FALSE)
   } else {
     gibbsSampler.update <- new("gibbsSampler",
                                reference     = psi,
                                X             = prism@mixture,
-                               gibbs.control = gibbs.control)
+                               gibbs.control = sampling.control)
     theta_f <- run.gibbs(gibbsSampler.update, final = TRUE)
   }
   
@@ -545,13 +616,13 @@ save.run.Omega <- function(prism,
                            Omega          = NULL,
                            Omega_type     = NULL,
                            n.cores        = 1,
-                           update.gibbs   = TRUE,
-                           compute.elbo   = FALSE,
-                           gibbs.control  = list(),
-                           opt.control    = list(),
-                           store.C.input  = c("value", "hash"),
+                           update.gibbs     = TRUE,
+                           compute.elbo     = FALSE,
+                           sampling.control = list(),
+                           opt.control      = list(),
+                           store.C.input    = c("value", "hash"),
                            cache.dir,
-                           overwrite      = FALSE) {
+                           overwrite        = FALSE) {
   
   stopifnot(!missing(cache.dir), is.character(cache.dir), length(cache.dir) == 1L)
   store.C.input <- match.arg(store.C.input)
@@ -561,14 +632,14 @@ save.run.Omega <- function(prism,
                    reference.name = reference.name, Omega = Omega,
                    Omega_type = Omega_type, n.cores = n.cores,
                    update.gibbs = update.gibbs, compute.elbo = compute.elbo,
-                   gibbs.control = gibbs.control, opt.control = opt.control,
+                   sampling.control = sampling.control, opt.control = opt.control,
                    store.C.input = store.C.input)
   
   # Filename comes from the shared meta helper (same identity run.prism.Omega
   # computes internally), so the cache key matches what the run would stamp.
   run.id <- .run_meta_Omega(prism, beta, method, mixture.name, reference.name,
                             omega.control, Omega, Omega_type, update.gibbs,
-                            opt.control, gibbs.control, n.cores, store.C.input)$run.id
+                            opt.control, sampling.control, n.cores, store.C.input)$run.id
   
   if (!dir.exists(cache.dir)) dir.create(cache.dir, recursive = TRUE)
   cache.file <- file.path(cache.dir, paste0(run.id, ".rds"))
@@ -595,30 +666,46 @@ save.run.Omega <- function(prism,
 #' (the malignant cell-type key, prism@key) and `update.gibbs` to match a real
 #' run; the defaults are for quick inspection.  Covers control-built runs; for a
 #' pre-built-Omega run recompute from the object with run.hashes(obj) instead.
-control.hashes <- function(gibbs.control = list(), opt.control = list(),
-                           omega.control = NULL, key = NA, update.gibbs = TRUE) {
-  if (!"n.cores" %in% names(opt.control))   opt.control$n.cores   <- 1
-  if (!"n.cores" %in% names(gibbs.control)) gibbs.control$n.cores <- 1
-  opt.control   <- valid.opt.control.Omega(opt.control)
-  gibbs.control <- valid.gibbs.control.Omega(gibbs.control)
+control.hashes <- function(sampling.control = list(), opt.control = list(),
+                           omega.control = NULL, key = NA, update.gibbs = TRUE,
+                           method = "dp") {
+  if (!"n.cores" %in% names(opt.control))      opt.control$n.cores      <- 1
+  if (!"n.cores" %in% names(sampling.control)) sampling.control$n.cores <- 1
+  opt.control      <- valid.opt.control.Omega(opt.control)
+  sampling.control <- valid.sampling.control(sampling.control, method)
   
   omega.control <- .normalize_omega_control(omega.control)
   omega.log     <- .omega_log_from_control(omega.control, NULL, NULL, "hash")
   omega.spec    <- .omega_spec_from_log(omega.log)
   
-  .compute_hashes(key, opt.control, gibbs.control, update.gibbs, omega.spec)
+  .compute_hashes(key, opt.control, sampling.control, update.gibbs, omega.spec)
 }
 
 
-#' Recompute the opt/gibbs/omega hash triplet from a BayesPrismOmega object
+#' Recompute the hash triplet from a stored object
 #'
-#' Uses only what the object stores (validated controls, prism@key, and the
-#' omega.log fingerprints), so no hashes need to be persisted.
+#' For a BayesPrismOmega: returns opt / gibbs / omega, using the validated
+#' controls, prism@key and the omega.log fingerprints (nothing is persisted).
+#' For a base BayesPrism object: returns opt / gibbs only (there is no Omega).
+#' The gibbs hash matches a DynaPrism run on the same prism with the same
+#' sampler settings; the opt hash does not, because a DynaPrism run's opt.control
+#' carries update.omega.
 run.hashes <- function(obj) {
-  stopifnot(is(obj, "BayesPrismOmega"))
-  cp <- obj@control_param
-  .compute_hashes(obj@prism@key, cp$opt.control, cp$gibbs.control,
-                  cp$update.gibbs, .omega_spec_from_log(cp$omega.log))
+  # Shim: objects saved before the sampling.control rename stored gibbs.control.
+  if (is(obj, "BayesPrismOmega")) {
+    cp <- obj@control_param
+    sc <- cp$sampling.control %||% cp$gibbs.control
+    return(.compute_hashes(obj@prism@key, cp$opt.control, sc,
+                           cp$update.gibbs, .omega_spec_from_log(cp$omega.log)))
+  }
+  if (is(obj, "BayesPrism")) {
+    cp <- obj@control_param
+    sc <- cp$sampling.control %||% cp$gibbs.control
+    h  <- .compute_hashes(obj@prism@key, cp$opt.control, sc,
+                          cp$update.gibbs, omega.spec = NULL)
+    return(h[c("opt", "sampling")])
+  }
+  stop("run.hashes: obj must be a BayesPrism or BayesPrismOmega object.")
 }
 
 
@@ -627,11 +714,16 @@ run.hashes <- function(obj) {
 #' Equals the filename save.run.Omega() wrote, since both converge on the same
 #' controls and omega spec.
 run.id <- function(obj) {
+  if (is(obj, "BayesPrism") && !is(obj, "BayesPrismOmega"))
+    stop("run.id: a base BayesPrism object does not store method / dataset names / ",
+         "beta, so a full run id cannot be formed. Use run.hashes(obj) for its ",
+         "opt/sampling hashes.")
   stopifnot(is(obj, "BayesPrismOmega"))
-  cp <- obj@control_param
-  h  <- run.hashes(obj)
+  cp   <- obj@control_param
+  h    <- run.hashes(obj)
+  beta <- (cp$sampling.control %||% cp$gibbs.control)$beta
   make_run_id(cp$method, cp$mixture.name, cp$reference.name,
-              h[["opt"]], h[["gibbs"]], h[["omega"]], cp$gibbs.control$beta)
+              h[["opt"]], h[["sampling"]], h[["omega"]], beta)
 }
 
 
